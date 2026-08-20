@@ -37,7 +37,9 @@ Prototype personnel : PWA offline-first pour un AB (Able Seaman) qui saisit les 
 
 **Sécurité** :
 - RLS Postgres sur toutes les tables utilisateur, jamais de sécurité reposant sur le masquage UI seul (§13).
-- `SUPABASE_SERVICE_ROLE_KEY` jamais exposée côté client.
+- `SUPABASE_SERVICE_ROLE_KEY` jamais exposée côté client (server-only, voir `src/lib/supabase/admin.ts`).
+
+**Audit log (§14) — complet depuis le 2026-08-20** : tous les événements listés au §14 sont couverts par des triggers Postgres (jamais d'insertion audit_log côté client — la table n'a d'ailleurs aucun GRANT INSERT pour `authenticated`) : `crossing.create`/`crossing.update`, `passenger.update` (avec `classification_overridden` en métadonnées), `role.change`, `vessel.status_change`, `data.delete` sur `crossings`/`passengers`. Point subtil : une suppression de passager en cascade (via suppression de sa traversée parente) n'est **pas** loguée séparément — seule la suppression de la traversée l'est, pour éviter de saturer `audit_log` (qui n'a pas de purge propre) à chaque purge nocturne. Implémenté via un flag de transaction (`set_config('paxflow.cascading_delete', ...)`), pas `pg_trigger_depth()` (qui ne distingue pas suppression directe et cascade FK — vérifié empiriquement, voir `scripts/debug-audit-triggers.mjs` / `npm run test:audit`).
 
 ## Contrainte d'architecture — Server Components vs offline (important, à ne pas casser)
 
