@@ -45,6 +45,12 @@ export default async function Home() {
           >
             History
           </Link>
+          <Link
+            href="/profile"
+            className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs text-zinc-700 dark:border-zinc-700 dark:text-zinc-300"
+          >
+            Profile
+          </Link>
           {(profile?.role === "admin" || profile?.role === "super_admin") && (
             <Link
               href="/admin"

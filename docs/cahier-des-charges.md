@@ -136,8 +136,15 @@ Pour rendre cette règle fiable sans recourir à une case dédiée ni à une dé
 - Un manifeste peut être modifié par son créateur tant qu'il n'est pas explicitement « finalisé/verrouillé » (proposition : un statut `draft` → `finalized`).
 - Une fois `finalized`, les modifications restent possibles mais génèrent une entrée d'audit (qui, quand, quoi) — pas de blocage strict en V1, sauf demande contraire.
 
-### 4.7 Réinitialisation manuelle des données — **nouveau (v1.1)**
-En complément de la purge automatique à 30 jours (§15.1, qui ne concerne que les traversées), l'utilisateur doit disposer d'une option explicite dans son profil pour **tout réinitialiser manuellement**, y compris sa mémoire intelligente (`known_people`/`known_crew`), s'il le souhaite (ex. changement de méthode de travail, nettoyage volontaire). Cette action est irréversible, protégée par une confirmation explicite (ex. saisie du mot "SUPPRIMER"), et journalisée dans `audit_log`.
+### 4.7 Suppression et réinitialisation manuelle des données — **révisé (2026-08-20) : trois niveaux distincts, implémentés**
+
+En complément de la purge automatique à 30 jours (§15.1, qui ne concerne que les traversées), l'utilisateur dispose de **trois actions de suppression manuelle bien distinctes et clairement libellées**, pour ne jamais confondre "je veux effacer cette traversée" avec "je veux tout effacer y compris ma mémoire" :
+
+1. **Suppression d'une traversée individuelle** (écran Historique, §11 écran 11) : bouton "Delete" sur chaque traversée, confirmation courte en ligne (Oui/Annuler). Ne touche que cette traversée et ses passagers.
+2. **"Clear my history"** (écran Profil, §11 écran 12) : supprime **toutes** les traversées et passagers de l'utilisateur d'un coup, sans attendre la purge à 30 jours. Ne touche **jamais** `known_people`/`known_crew` — ces deux notions restent indépendantes.
+3. **"Full reset"** (écran Profil) : fait tout ce que fait le point 2, **plus** la mémoire intelligente (`known_people`/`known_crew`). Action irréversible, protégée par une confirmation explicite (saisie du mot "DELETE" — adapté de "SUPPRIMER" pour cohérence avec l'UI en anglais), et journalisée dans `audit_log` via triggers Postgres sur chaque table concernée.
+
+**Suppression sûre hors-ligne** : une suppression déclenchée hors-ligne retire la donnée immédiatement en local (Dexie) et met en file une suppression distante différée (`pending_deletes`, local uniquement) rejouée dès que le réseau revient. Le mécanisme de pull du moteur de sync ignore les identifiants en attente de suppression, pour ne jamais "ressusciter" localement une ligne que l'utilisateur vient de supprimer mais qui existe encore côté serveur au moment du pull.
 
 ---
 
@@ -334,7 +341,7 @@ Connexion
 9. **Résumé généré** (texte, boutons Copier / Partager WhatsApp).
 10. **Manifeste généré** (aperçu PDF/Image, boutons Télécharger PDF / Télécharger Image).
 11. **Historique** (liste des traversées passées de l'utilisateur, filtrable par date/BIRD, ouverture en lecture).
-12. **Profil / Paramètres utilisateur** (déconnexion, réinitialisation de ses données mémorisées).
+12. **Profil / Paramètres utilisateur** — implémenté 2026-08-20 : "Clear my history" et "Full reset" (§4.7), en plus de la déconnexion (accessible depuis l'accueil).
 13. **(Admin) Supervision** — vue lecture seule des manifestes/historique global, sans actions de modification.
 14. **(Super Admin) Administration** — gestion utilisateurs/rôles, gestion des bateaux (statut, capacité), vue d'audit.
 

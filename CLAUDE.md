@@ -34,6 +34,7 @@ Prototype personnel : PWA offline-first pour un AB (Able Seaman) qui saisit les 
 **Rétention des données (§15.1/§4.7)** :
 - `crossings`/`passengers` : purge automatique à 30 jours (`expires_at`, cascade).
 - `known_people`/`known_crew` (mémoire intelligente) : **jamais purgés automatiquement**, strictement privés par utilisateur (`owner_id`), persistent indéfiniment sauf réinitialisation manuelle explicite par l'utilisateur.
+- **Trois actions de suppression manuelle distinctes (implémentées 2026-08-20, ne jamais les fusionner)** : suppression d'une traversée individuelle (Historique) ; "Clear my history" (Profil, crossings+passengers uniquement) ; "Full reset" (Profil, + known_people/known_crew, confirmation "DELETE"). Toute suppression passe par `src/lib/sync.ts` (`deleteCrossing`/`clearMyHistory`/`resetAllMyData`) qui gère la table locale `pending_deletes` — ne jamais supprimer directement via Dexie sans passer par ces fonctions, sinon la ligne peut "ressusciter" au prochain pull si la suppression distante n'a pas encore eu lieu.
 
 **Sécurité** :
 - RLS Postgres sur toutes les tables utilisateur, jamais de sécurité reposant sur le masquage UI seul (§13).

@@ -106,3 +106,16 @@ export interface LocalKnownCrew {
   created_at: string;
   sync_status: SyncStatus;
 }
+
+// Local-only tombstone queue: a manual delete (History screen, "Clear my
+// history", "Full reset" — §4.7) removes the row from Dexie immediately
+// for instant UI feedback, but the matching Supabase row can only be
+// deleted once online. Without tracking that intent here, the next sync's
+// pull would silently re-download the "deleted" row from the server and
+// resurrect it locally. Never synced to Supabase itself — purely local
+// bookkeeping consumed by sync.ts's processPendingDeletes().
+export interface LocalPendingDelete {
+  id: string; // the id of the row to delete
+  table_name: "crossings" | "known_people" | "known_crew";
+  created_at: string;
+}

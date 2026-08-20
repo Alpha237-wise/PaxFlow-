@@ -125,7 +125,17 @@ async function pullCrossings(userId: string): Promise<void> {
       .eq("created_by", userId);
     if (error || !data) return;
 
+    const pendingDeleteIds = new Set(
+      (await db.pending_deletes.where("table_name").equals("crossings").toArray()).map(
+        (d) => d.id,
+      ),
+    );
+
     for (const r of data) {
+      // Don't resurrect a row the AB just deleted locally but that hasn't
+      // been removed server-side yet (still offline, or this pull raced
+      // ahead of processPendingDeletes this same sync cycle).
+      if (pendingDeleteIds.has(r.id)) continue;
       const local = await db.crossings.get(r.id);
       if (!local || new Date(r.updated_at) > new Date(local.updated_at)) {
         await db.crossings.put({
@@ -191,7 +201,14 @@ async function pullKnownPeople(userId: string): Promise<void> {
       .eq("owner_id", userId);
     if (error || !data) return;
 
+    const pendingDeleteIds = new Set(
+      (
+        await db.pending_deletes.where("table_name").equals("known_people").toArray()
+      ).map((d) => d.id),
+    );
+
     for (const r of data) {
+      if (pendingDeleteIds.has(r.id)) continue;
       const local = await db.known_people.get(r.id);
       if (!local || new Date(r.last_used_at) > new Date(local.last_used_at)) {
         await db.known_people.put({ ...r, sync_status: "synced" });
@@ -212,7 +229,14 @@ async function pullKnownCrew(userId: string): Promise<void> {
       .eq("owner_id", userId);
     if (error || !data) return;
 
+    const pendingDeleteIds = new Set(
+      (
+        await db.pending_deletes.where("table_name").equals("known_crew").toArray()
+      ).map((d) => d.id),
+    );
+
     for (const r of data) {
+      if (pendingDeleteIds.has(r.id)) continue;
       const local = await db.known_crew.get(r.id);
       if (!local || new Date(r.last_used_at) > new Date(local.last_used_at)) {
         await db.known_crew.put({
@@ -227,7 +251,109 @@ async function pullKnownCrew(userId: string): Promise<void> {
   }
 }
 
+// Consumes the local delete queue (see LocalPendingDelete's docstring in
+// db/schema.ts). Best-effort: leaves an entry queued if still offline, the
+// next sync trigger retries it.
+export async function processPendingDeletes(): Promise<void> {
+  const db = getDb();
+  const supabase = createClient();
+  const queued = await db.pending_deletes.toArray();
+  for (const entry of queued) {
+    try {
+      const { error } = await supabase
+        .from(entry.table_name)
+        .delete()
+        .eq("id", entry.id);
+      if (!error) {
+        await db.pending_deletes.delete(entry.id);
+      }
+    } catch {
+      // Still offline — leave it queued.
+    }
+  }
+}
+
+// Deletes one crossing (History screen's per-row "Delete", §11 screen 11).
+// Removes it locally immediately, queues the server-side delete, and makes
+// one best-effort attempt right away in case the AB is online.
+export async function deleteCrossing(crossingId: string): Promise<void> {
+  const db = getDb();
+  await db.passengers.where("crossing_id").equals(crossingId).delete();
+  await db.crossings.delete(crossingId);
+  await db.pending_deletes.put({
+    id: crossingId,
+    table_name: "crossings",
+    created_at: new Date().toISOString(),
+  });
+  void processPendingDeletes();
+}
+
+// "Vider mon historique" (profile screen): every crossing/passenger this
+// user owns, nothing else — known_people/known_crew are explicitly left
+// alone (§4.7 — memory reset is a separate, stronger action).
+export async function clearMyHistory(userId: string): Promise<void> {
+  const db = getDb();
+  const myCrossingIds = (
+    await db.crossings.where("created_by").equals(userId).toArray()
+  ).map((c) => c.id);
+
+  for (const id of myCrossingIds) {
+    await db.passengers.where("crossing_id").equals(id).delete();
+  }
+  await db.crossings.where("created_by").equals(userId).delete();
+
+  const now = new Date().toISOString();
+  await db.pending_deletes.bulkPut(
+    myCrossingIds.map((id) => ({
+      id,
+      table_name: "crossings" as const,
+      created_at: now,
+    })),
+  );
+  void processPendingDeletes();
+}
+
+// Full reset (§4.7): everything "Vider mon historique" does, plus wipes
+// the memory (known_people/known_crew) too. The two stay implemented as
+// separate functions on purpose — this one is strictly a superset, never
+// call it as a silent side effect of the lighter action.
+export async function resetAllMyData(userId: string): Promise<void> {
+  await clearMyHistory(userId);
+
+  const db = getDb();
+  const knownPeopleIds = (
+    await db.known_people.where("owner_id").equals(userId).toArray()
+  ).map((k) => k.id);
+  const knownCrewIds = (
+    await db.known_crew.where("owner_id").equals(userId).toArray()
+  ).map((k) => k.id);
+
+  await db.known_people.where("owner_id").equals(userId).delete();
+  await db.known_crew.where("owner_id").equals(userId).delete();
+
+  const now = new Date().toISOString();
+  await db.pending_deletes.bulkPut([
+    ...knownPeopleIds.map((id) => ({
+      id,
+      table_name: "known_people" as const,
+      created_at: now,
+    })),
+    ...knownCrewIds.map((id) => ({
+      id,
+      table_name: "known_crew" as const,
+      created_at: now,
+    })),
+  ]);
+  void processPendingDeletes();
+}
+
 export async function runSync(userId: string): Promise<void> {
+  // Process queued deletes before any pull, so a delete that just went
+  // through server-side isn't briefly re-pulled by the checks below (they
+  // also guard against it independently, but this ordering avoids relying
+  // on that alone).
+  await processPendingDeletes();
+
   // Vessels first and on its own: the BIRD chooser is the first screen of
   // the whole workflow, so this cache matters more than anything else
   // here being fully up to date yet.

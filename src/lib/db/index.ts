@@ -5,6 +5,7 @@ import type {
   LocalPassenger,
   LocalKnownPerson,
   LocalKnownCrew,
+  LocalPendingDelete,
 } from "./schema";
 
 export class PaxFlowDB extends Dexie {
@@ -13,6 +14,7 @@ export class PaxFlowDB extends Dexie {
   passengers!: EntityTable<LocalPassenger, "id">;
   known_people!: EntityTable<LocalKnownPerson, "id">;
   known_crew!: EntityTable<LocalKnownCrew, "id">;
+  pending_deletes!: EntityTable<LocalPendingDelete, "id">;
 
   constructor() {
     super("paxflow");
@@ -22,6 +24,17 @@ export class PaxFlowDB extends Dexie {
       passengers: "id, crossing_id, sync_status, &[crossing_id+seat_number]",
       known_people: "id, owner_id, name",
       known_crew: "id, owner_id, role",
+    });
+    // v2: adds pending_deletes (§ manual delete/reset feature) — purely
+    // additive, no changes to existing stores, so existing installs
+    // upgrade with nothing to migrate.
+    this.version(2).stores({
+      vessels: "id, name",
+      crossings: "id, created_by, vessel_id, sync_status, expires_at",
+      passengers: "id, crossing_id, sync_status, &[crossing_id+seat_number]",
+      known_people: "id, owner_id, name",
+      known_crew: "id, owner_id, role",
+      pending_deletes: "id, table_name",
     });
   }
 }
