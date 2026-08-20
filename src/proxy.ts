@@ -30,7 +30,12 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  await supabase.auth.getUser();
+  try {
+    await supabase.auth.getUser();
+  } catch {
+    // Network unreachable (offline at sea, §16.7) — fall through with
+    // whatever session cookie already exists rather than blocking navigation.
+  }
 
   return response;
 }
