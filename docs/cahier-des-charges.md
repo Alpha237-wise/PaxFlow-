@@ -218,18 +218,42 @@ Capt <nom Captain on board> team
 suivi du **manifeste généré (image ou PDF)** en pièce jointe.
 
 **Message 2 — Répartition par département :**
+
+**Format exact confirmé (2026-08-20) par `docs/reference/whatsapp-summary-example.jpg`** — corrige la version précédente de ce document, qui montrait à tort un format `<département>: <effectif>`. Le format réel colle l'effectif directement devant le libellé, sans deux-points ni espace :
+
 ```
 <Vessel Name abrégé, ex. B1>
-<département 1>: <effectif TM>
-<département 2>: <effectif TM>
+<effectif TM 1><département 1>
+<effectif TM 2><département 2>
 ...
 
-<département/compagnie 1>: <effectif CC>
-<département/compagnie 2>: <effectif CC>
+<effectif CC 1><département/compagnie 1>
+<effectif CC 2><département/compagnie 2>
 ...
 ```
+
+Exemple réel :
+```
+B1
+7fnb
+3Eng
+3Spa
+6hk
+11recreation
+2finance
+2fo
+5kit
+
+2fnb/shisha-souls
+1valet
+3IT/ORIX
+3Eng/Qsp
+1canteen/uhs
+1Eng/SEGAFREDO
+1kit/uhs
+```
 - La première liste (avant la ligne vide) reprend les **TM regroupés par département**.
-- La seconde liste (après la ligne vide) reprend les **CC regroupés par département/compagnie**, exactement comme demandé : *« PaxFlow me donne aussi le nombre de personnes par département, les TM au-dessus et les CC en dessous »*.
+- La seconde liste (après la ligne vide) reprend les **CC regroupés par département/compagnie** (voir §4.3 pour la clé de regroupement exacte), exactement comme demandé : *« PaxFlow me donne aussi le nombre de personnes par département, les TM au-dessus et les CC en dessous »*.
 - Guests et équipage (hors Captain/MH déjà cités en message 1) **n'apparaissent pas** dans ce résumé, conformément à la règle §4.2/§8.
 
 ### 8.2 Actions

@@ -6,6 +6,7 @@ import { getDb } from "@/lib/db";
 import { SeatMap } from "./seat-map";
 import { CrewGuestsForm } from "./crew-guests-form";
 import { SummaryView } from "./summary-view";
+import { WhatsAppSummaryView } from "./whatsapp-summary-view";
 
 export function CrossingDetail({
   crossingId,
@@ -124,6 +125,15 @@ export function CrossingDetail({
       />
 
       <SummaryView crossingId={crossing.id} />
+
+      <WhatsAppSummaryView
+        crossingId={crossing.id}
+        vesselName={vesselLabel}
+        portOfOrigin={crossing.port_of_origin}
+        destination={crossing.destination}
+        marineHostess={crossing.marine_hostess}
+        captainOnBoard={crossing.captain_on_board}
+      />
 
       <Link
         href="/"
