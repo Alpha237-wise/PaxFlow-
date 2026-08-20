@@ -43,3 +43,6 @@ next-env.d.ts
 # reference documents (may contain real company data/branding — never committed)
 /docs/reference/*
 !/docs/reference/.gitkeep
+
+.vercel
+.env*
