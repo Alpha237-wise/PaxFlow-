@@ -20,7 +20,7 @@ export function CrossingDetail({
 }) {
   // Dexie's .get() resolves to undefined both while a query is pending and
   // when the row genuinely doesn't exist — wrap it so those two states
-  // stay distinguishable instead of showing "Chargement…" forever for a
+  // stay distinguishable instead of showing "Loading…" forever for a
   // missing id.
   const result = useLiveQuery(
     async () => ({ crossing: await getDb().crossings.get(crossingId) }),
@@ -36,7 +36,7 @@ export function CrossingDetail({
 
   if (result === undefined) {
     return (
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">Chargement…</p>
+      <p className="text-sm text-zinc-600 dark:text-zinc-400">Loading…</p>
     );
   }
 
@@ -46,13 +46,13 @@ export function CrossingDetail({
     return (
       <div className="text-center">
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Traversée introuvable localement.
+          Crossing not found locally.
         </p>
         <Link
           href="/"
           className="mt-3 inline-block text-sm font-medium text-zinc-900 underline dark:text-zinc-50"
         >
-          Retour à l&apos;accueil
+          Back to home
         </Link>
       </div>
     );
@@ -67,7 +67,7 @@ export function CrossingDetail({
           {vesselLabel}
         </h1>
         <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-          {crossing.status === "draft" ? "Brouillon" : "Finalisée"}
+          {crossing.status === "draft" ? "Draft" : "Finalized"}
         </span>
       </div>
 
@@ -77,17 +77,17 @@ export function CrossingDetail({
           {crossing.crossing_date}
         </dd>
 
-        <dt className="text-zinc-500 dark:text-zinc-400">Départ</dt>
+        <dt className="text-zinc-500 dark:text-zinc-400">Departure</dt>
         <dd className="text-zinc-900 dark:text-zinc-50">
           {crossing.time_of_departure ?? "—"}
         </dd>
 
-        <dt className="text-zinc-500 dark:text-zinc-400">Arrivée</dt>
+        <dt className="text-zinc-500 dark:text-zinc-400">Arrival</dt>
         <dd className="text-zinc-900 dark:text-zinc-50">
           {crossing.time_of_arrival ?? "—"}
         </dd>
 
-        <dt className="text-zinc-500 dark:text-zinc-400">Origine</dt>
+        <dt className="text-zinc-500 dark:text-zinc-400">Origin</dt>
         <dd className="text-zinc-900 dark:text-zinc-50">
           {crossing.port_of_origin ?? "—"}
         </dd>
@@ -100,10 +100,10 @@ export function CrossingDetail({
         <dt className="text-zinc-500 dark:text-zinc-400">Sync</dt>
         <dd className="text-zinc-900 dark:text-zinc-50">
           {crossing.sync_status === "pending"
-            ? "En attente de synchronisation"
+            ? "Pending sync"
             : crossing.sync_status === "synced"
-              ? "Synchronisée"
-              : "Erreur de synchronisation"}
+              ? "Synced"
+              : "Sync error"}
         </dd>
       </dl>
 
@@ -138,15 +138,17 @@ export function CrossingDetail({
         vesselName={vesselLabel}
         portOfOrigin={crossing.port_of_origin}
         destination={crossing.destination}
+        timeOfDeparture={crossing.time_of_departure}
         marineHostess={crossing.marine_hostess}
         captainOnBoard={crossing.captain_on_board}
+        totalGuests={crossing.total_guests}
       />
 
       <Link
         href="/"
         className="block text-center text-sm font-medium text-zinc-900 underline dark:text-zinc-50"
       >
-        Retour à l&apos;accueil
+        Back to home
       </Link>
     </div>
   );

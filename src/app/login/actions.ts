@@ -45,7 +45,7 @@ export async function signUp(formData: FormData) {
 
   redirect(
     `/login?message=${encodeURIComponent(
-      "Compte créé. Vérifie ta boîte mail pour confirmer ton adresse avant de te connecter.",
+      "Account created. Check your inbox to confirm your address before signing in.",
     )}`,
   );
 }

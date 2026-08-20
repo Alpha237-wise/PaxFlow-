@@ -48,13 +48,13 @@ export function NewCrossingForm({
     return (
       <div className="w-full max-w-sm text-center">
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Choisis d&apos;abord un BIRD.
+          Choose a BIRD first.
         </p>
         <Link
           href="/"
           className="mt-3 inline-block text-sm font-medium text-zinc-900 underline dark:text-zinc-50"
         >
-          Retour à l&apos;accueil
+          Back to home
         </Link>
       </div>
     );
@@ -96,7 +96,7 @@ export function NewCrossingForm({
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4">
       <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-        Nouvelle traversée
+        New crossing
       </h1>
 
       <div>
@@ -165,7 +165,7 @@ export function NewCrossingForm({
             className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-base dark:border-zinc-700 dark:bg-zinc-900"
           />
           <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-            Peut être renseignée plus tard.
+            Can be filled in later.
           </p>
         </div>
       </div>
@@ -209,7 +209,7 @@ export function NewCrossingForm({
         disabled={!vessel || submitting}
         className="w-full rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
       >
-        {submitting ? "Création…" : "Créer la traversée"}
+        {submitting ? "Creating…" : "Create crossing"}
       </button>
     </form>
   );

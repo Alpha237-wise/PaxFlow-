@@ -44,7 +44,7 @@ export function VesselChooser({
   return (
     <div className="w-full max-w-sm">
       <h2 className="mb-3 text-sm font-medium text-zinc-600 dark:text-zinc-400">
-        Choisir le BIRD
+        Choose the BIRD
       </h2>
       <ul className="grid grid-cols-2 gap-3">
         {sorted.map((vessel) => {
@@ -65,11 +65,11 @@ export function VesselChooser({
                 <span
                   className={`text-xs ${selected ? "opacity-80" : "text-zinc-500 dark:text-zinc-400"}`}
                 >
-                  {vessel.total_seats} places
+                  {vessel.total_seats} seats
                 </span>
                 {vessel.status === "out_of_service" && (
                   <span className="mt-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:bg-amber-900 dark:text-amber-200">
-                    Hors service
+                    Out of service
                   </span>
                 )}
               </button>
@@ -84,7 +84,7 @@ export function VesselChooser({
           onClick={() => router.push(`/crossings/new?vessel=${selectedId}`)}
           className="mt-4 w-full rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
         >
-          Continuer avec {sorted.find((v) => v.id === selectedId)?.name}
+          Continue with {sorted.find((v) => v.id === selectedId)?.name}
         </button>
       )}
     </div>

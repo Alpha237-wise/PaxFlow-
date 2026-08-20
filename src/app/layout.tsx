@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "PaxFlow",
-  description: "Manifeste numérique de traversée — offline-first.",
+  description: "Digital crossing manifest — offline-first.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,

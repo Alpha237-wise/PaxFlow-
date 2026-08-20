@@ -75,7 +75,7 @@ export function ManifestView({
   return (
     <div className="w-full max-w-sm space-y-3">
       <h2 className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-        Manifeste
+        Manifest
       </h2>
 
       <div className="overflow-x-auto rounded-md border border-zinc-200 dark:border-zinc-800">
@@ -129,7 +129,7 @@ export function ManifestView({
               {manifest.rows.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="py-3 text-center text-zinc-500">
-                    Aucun passager saisi
+                    No passengers entered yet
                   </td>
                 </tr>
               ) : (
@@ -165,7 +165,7 @@ export function ManifestView({
           disabled={busy !== null}
           className="flex-1 rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
         >
-          {busy === "pdf" ? "Génération…" : "Télécharger PDF"}
+          {busy === "pdf" ? "Generating…" : "Download PDF"}
         </button>
         <button
           type="button"
@@ -173,7 +173,7 @@ export function ManifestView({
           disabled={busy !== null}
           className="flex-1 rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300"
         >
-          {busy === "image" ? "Génération…" : "Télécharger Image"}
+          {busy === "image" ? "Generating…" : "Download Image"}
         </button>
       </div>
     </div>

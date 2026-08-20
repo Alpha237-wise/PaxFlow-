@@ -208,13 +208,22 @@ Champs texte libre avec autocomplete (mémoire intelligente, §4.5) :
 Le porteur de projet a fourni une capture d'écran de son usage réel actuel (copié-collé manuellement dans le groupe WhatsApp « Marine Operations »). PaxFlow doit reproduire fidèlement cette structure, en **deux messages séparés** (décision validée le 2026-08-20 — chaque bloc a son propre bouton Copier/Partager, plutôt qu'un seul texte à deux blocs).
 
 **Message 1 — Résumé + photo du manifeste :**
+
+**Format révisé (2026-08-20) par le porteur de projet** — remplace le format précédemment aligné sur l'exemple photo de référence :
 ```
+<Vessel Name compact, ex. BIRD1>
+Dep@:<Time of Departure, format HHMMhrs, ex. 0700hrs>
 <Port of Origin> to <Destination>
 <Total TM>TM
-<Total CC> cc
+<Total CC>CC
+<Total Guests>guests
 Mh <nom Marine Hostess>
 Capt <nom Captain on board> team
 ```
+- Ligne 1 : nom du vessel **sans espace** (ex. "BIRD1", différent de l'abréviation "B1" du Message 2).
+- Ligne 6 : le nombre de guests est **toujours affiché**, y compris s'il vaut 0 — jamais omis.
+- `<Total CC>CC` : collé, en majuscules (différent de l'ancien format "12 cc" observé sur l'exemple réel — changement explicite du porteur de projet, pas une erreur).
+
 suivi du **manifeste généré (image ou PDF)** en pièce jointe.
 
 **Message 2 — Répartition par département :**

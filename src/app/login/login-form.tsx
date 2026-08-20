@@ -18,7 +18,7 @@ export function LoginForm() {
             PaxFlow
           </h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            {mode === "signin" ? "Connexion" : "Créer un compte"}
+            {mode === "signin" ? "Sign in" : "Create an account"}
           </p>
         </div>
 
@@ -44,7 +44,7 @@ export function LoginForm() {
                 htmlFor="fullName"
                 className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
               >
-                Nom complet
+                Full name
               </label>
               <input
                 id="fullName"
@@ -76,7 +76,7 @@ export function LoginForm() {
               htmlFor="password"
               className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
             >
-              Mot de passe
+              Password
             </label>
             <input
               id="password"
@@ -92,7 +92,7 @@ export function LoginForm() {
             type="submit"
             className="w-full rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
           >
-            {mode === "signin" ? "Se connecter" : "Créer mon compte"}
+            {mode === "signin" ? "Sign in" : "Create my account"}
           </button>
         </form>
 
@@ -102,8 +102,8 @@ export function LoginForm() {
           className="w-full text-center text-sm text-zinc-600 underline dark:text-zinc-400"
         >
           {mode === "signin"
-            ? "Pas encore de compte ? En créer un"
-            : "Déjà un compte ? Se connecter"}
+            ? "No account yet? Create one"
+            : "Already have an account? Sign in"}
         </button>
       </div>
     </div>

@@ -44,7 +44,7 @@ function MessageBlock({
           onClick={handleCopy}
           className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm text-zinc-700 dark:border-zinc-700 dark:text-zinc-300"
         >
-          {copied ? "Copié !" : "Copier"}
+          {copied ? "Copied!" : "Copy"}
         </button>
         {canShare && (
           <button
@@ -52,7 +52,7 @@ function MessageBlock({
             onClick={handleShare}
             className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
           >
-            Partager sur WhatsApp
+            Share to WhatsApp
           </button>
         )}
       </div>
@@ -65,15 +65,19 @@ export function WhatsAppSummaryView({
   vesselName,
   portOfOrigin,
   destination,
+  timeOfDeparture,
   marineHostess,
   captainOnBoard,
+  totalGuests,
 }: {
   crossingId: string;
   vesselName: string;
   portOfOrigin: string | null;
   destination: string | null;
+  timeOfDeparture: string | null;
   marineHostess: string | null;
   captainOnBoard: string | null;
+  totalGuests: number | null;
 }) {
   const [canShare, setCanShare] = useState(false);
   useEffect(() => {
@@ -94,8 +98,10 @@ export function WhatsAppSummaryView({
   const { message1, message2 } = buildWhatsAppSummary({
     portOfOrigin,
     destination,
+    timeOfDeparture,
     marineHostess,
     captainOnBoard,
+    totalGuests,
     vesselName,
     passengers: passengers ?? [],
   });
@@ -103,16 +109,15 @@ export function WhatsAppSummaryView({
   return (
     <div className="w-full max-w-sm space-y-4">
       <h2 className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-        Résumé WhatsApp
+        WhatsApp summary
       </h2>
       <MessageBlock label="Message 1" text={message1} canShare={canShare} />
       <MessageBlock label="Message 2" text={message2} canShare={canShare} />
       <p className="text-xs text-zinc-500 dark:text-zinc-400">
-        Pour joindre le manifeste au Message 1 : télécharge-le ci-dessous
-        (Image ou PDF), puis ajoute-le dans WhatsApp juste après avoir
-        partagé ce texte (§8.2 — pièce jointe manuelle, le format de
-        partage du texte seul ne permet pas toujours d&apos;attacher un
-        fichier automatiquement).
+        To attach the manifest to Message 1: download it below (Image or
+        PDF), then add it in WhatsApp right after sharing this text (§8.2 —
+        manual attachment, sharing text alone doesn&apos;t always support
+        attaching a file automatically).
       </p>
     </div>
   );

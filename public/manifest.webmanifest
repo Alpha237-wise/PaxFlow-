@@ -1,7 +1,7 @@
 {
   "name": "PaxFlow",
   "short_name": "PaxFlow",
-  "description": "Manifeste numérique de traversée pour AB — offline-first.",
+  "description": "Digital crossing manifest for an AB — offline-first.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",

@@ -148,14 +148,14 @@ export function PassengerSheet({
       <div className="w-full max-w-sm rounded-t-xl bg-white p-5 dark:bg-zinc-900 sm:rounded-xl">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
-            Siège {seatNumber}
+            Seat {seatNumber}
           </h2>
           <button
             type="button"
             onClick={onClose}
             className="text-sm text-zinc-500 dark:text-zinc-400"
           >
-            Fermer
+            Close
           </button>
         </div>
 
@@ -215,7 +215,7 @@ export function PassengerSheet({
               type="text"
               value={companyIdNumber}
               onChange={(e) => setCompanyIdNumber(e.target.value)}
-              placeholder="vide pour Director/Manager/new joiner"
+              placeholder="blank for Director/Manager/new joiner"
               className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-base dark:border-zinc-700 dark:bg-zinc-800"
             />
           </div>
@@ -233,7 +233,7 @@ export function PassengerSheet({
                 type="text"
                 value={department}
                 onChange={(e) => setDepartment(e.target.value)}
-                placeholder="ex: FNB, Kit, Eng"
+                placeholder="e.g. FNB, Kit, Eng"
                 className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-base dark:border-zinc-700 dark:bg-zinc-800"
               />
             </div>
@@ -249,7 +249,7 @@ export function PassengerSheet({
                 type="text"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
-                placeholder="ex: UHS, Valet"
+                placeholder="e.g. UHS, Valet"
                 className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-base dark:border-zinc-700 dark:bg-zinc-800"
               />
             </div>
@@ -284,7 +284,7 @@ export function PassengerSheet({
             </div>
             {resolved.overridden && (
               <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
-                Classification corrigée manuellement (calcul automatique :{" "}
+                Classification manually corrected (automatic result:{" "}
                 {resolved.computed}).
               </p>
             )}
@@ -297,7 +297,7 @@ export function PassengerSheet({
                 onClick={handleRemove}
                 className="flex-1 rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-700 dark:border-red-900 dark:text-red-400"
               >
-                Retirer
+                Remove
               </button>
             )}
             <button
@@ -305,7 +305,7 @@ export function PassengerSheet({
               disabled={saving || !name.trim()}
               className="flex-1 rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
             >
-              Enregistrer
+              Save
             </button>
           </div>
         </form>

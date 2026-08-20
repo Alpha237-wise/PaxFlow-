@@ -31,7 +31,7 @@ export function SeatMap({
   return (
     <div className="w-full max-w-sm">
       <h2 className="mb-3 text-sm font-medium text-zinc-600 dark:text-zinc-400">
-        Plan des sièges {passengers ? `(${passengers.length} occupé${passengers.length > 1 ? "s" : ""})` : ""}
+        Seat map {passengers ? `(${passengers.length} occupied)` : ""}
       </h2>
 
       <div className="flex gap-3 overflow-x-auto pb-2">

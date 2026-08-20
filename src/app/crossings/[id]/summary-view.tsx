@@ -15,7 +15,7 @@ export function SummaryView({ crossingId }: { crossingId: string }) {
   return (
     <div className="w-full max-w-sm space-y-3">
       <h2 className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-        Synthèse
+        Summary
       </h2>
 
       <div className="flex gap-3">
@@ -36,7 +36,7 @@ export function SummaryView({ crossingId }: { crossingId: string }) {
       {summary.tmByDepartment.length > 0 && (
         <div>
           <h3 className="mb-1 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-            TM par département
+            TM by department
           </h3>
           <ul className="space-y-0.5 text-sm">
             {summary.tmByDepartment.map((g) => (
@@ -55,7 +55,7 @@ export function SummaryView({ crossingId }: { crossingId: string }) {
       {summary.ccByGroup.length > 0 && (
         <div>
           <h3 className="mb-1 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-            CC par département/compagnie
+            CC by department/company
           </h3>
           <ul className="space-y-0.5 text-sm">
             {summary.ccByGroup.map((g) => (

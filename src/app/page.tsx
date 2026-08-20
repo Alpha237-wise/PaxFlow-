@@ -42,7 +42,7 @@ export default async function Home() {
             type="submit"
             className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs text-zinc-700 dark:border-zinc-700 dark:text-zinc-300"
           >
-            Se déconnecter
+            Sign out
           </button>
         </form>
       </div>

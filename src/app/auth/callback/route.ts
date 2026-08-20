@@ -17,6 +17,6 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.redirect(
-    `${origin}/login?error=${encodeURIComponent("Lien de confirmation invalide ou expiré.")}`,
+    `${origin}/login?error=${encodeURIComponent("Confirmation link is invalid or expired.")}`,
   );
 }
