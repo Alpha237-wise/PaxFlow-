@@ -40,19 +40,36 @@ export interface ManifestCrossingInput {
   total_guests: number | null;
 }
 
+// Revised 2026-08-20 (project owner): the manifest must show every seat of
+// the BIRD used, blank rows included, matching the paper original exactly
+// — not just the occupied ones. Replaces the earlier "dynamic table"
+// behaviour (§9.2 as originally written).
+const SEAT_COUNT: Record<"51-seats" | "50-seats", number> = {
+  "51-seats": 51,
+  "50-seats": 50,
+};
+
 export function buildManifestData(
   crossing: ManifestCrossingInput,
   vesselName: string,
   passengers: ManifestPassenger[],
+  seatLayoutRef: "51-seats" | "50-seats",
 ): ManifestData {
-  const rows: ManifestRow[] = [...passengers]
-    .sort((a, b) => a.seat_number - b.seat_number)
-    .map((p) => ({
-      seat: p.seat_number,
-      name: p.name,
-      companyIdNumber: p.company_id_number ?? "",
-      departmentCompany: formatDepartmentCompany(p.department, p.company_name),
-    }));
+  const bySeat = new Map(passengers.map((p) => [p.seat_number, p]));
+  const totalSeats = SEAT_COUNT[seatLayoutRef];
+
+  const rows: ManifestRow[] = [];
+  for (let seat = 1; seat <= totalSeats; seat++) {
+    const p = bySeat.get(seat);
+    rows.push({
+      seat,
+      name: p?.name ?? "",
+      companyIdNumber: p?.company_id_number ?? "",
+      departmentCompany: p
+        ? formatDepartmentCompany(p.department, p.company_name)
+        : "",
+    });
+  }
 
   return {
     vesselName,

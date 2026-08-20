@@ -34,7 +34,7 @@ export default async function AdminCrossingPage({
   const { data: crossing } = await supabase
     .from("crossings")
     .select(
-      "*, vessels(name), profiles(full_name)",
+      "*, vessels(name, seat_layout_ref), profiles(full_name)",
     )
     .eq("id", id)
     .single();
@@ -53,7 +53,15 @@ export default async function AdminCrossingPage({
   const summary = summarizeCrossing(passengerRows);
   const vesselLabel =
     crossing.vessel_name_override || crossing.vessels?.name || "—";
-  const manifest = buildManifestData(crossing, vesselLabel, passengerRows);
+  const seatLayoutRef =
+    (crossing.vessels?.seat_layout_ref as "51-seats" | "50-seats" | undefined) ??
+    "51-seats";
+  const manifest = buildManifestData(
+    crossing,
+    vesselLabel,
+    passengerRows,
+    seatLayoutRef,
+  );
 
   return (
     <div className="flex flex-1 flex-col items-center bg-zinc-50 px-6 py-8 dark:bg-black">

@@ -13,10 +13,12 @@ export function ManifestView({
   crossingId,
   vesselName,
   crossing,
+  seatLayoutRef,
 }: {
   crossingId: string;
   vesselName: string;
   crossing: ManifestCrossingInput;
+  seatLayoutRef: "51-seats" | "50-seats";
 }) {
   const manifestRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState<"pdf" | "image" | null>(null);
@@ -26,7 +28,12 @@ export function ManifestView({
     [crossingId],
   );
 
-  const manifest = buildManifestData(crossing, vesselName, passengers ?? []);
+  const manifest = buildManifestData(
+    crossing,
+    vesselName,
+    passengers ?? [],
+    seatLayoutRef,
+  );
 
   async function toPngDataUrl(): Promise<{ url: string; width: number; height: number }> {
     const node = manifestRef.current;
@@ -126,22 +133,14 @@ export function ManifestView({
               </tr>
             </thead>
             <tbody>
-              {manifest.rows.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="py-3 text-center text-zinc-500">
-                    No passengers entered yet
-                  </td>
+              {manifest.rows.map((row) => (
+                <tr key={row.seat} className="border-b border-zinc-200">
+                  <td className="py-1">{row.seat}</td>
+                  <td className="py-1">{row.name}</td>
+                  <td className="py-1">{row.companyIdNumber}</td>
+                  <td className="py-1">{row.departmentCompany}</td>
                 </tr>
-              ) : (
-                manifest.rows.map((row) => (
-                  <tr key={row.seat} className="border-b border-zinc-200">
-                    <td className="py-1">{row.seat}</td>
-                    <td className="py-1">{row.name}</td>
-                    <td className="py-1">{row.companyIdNumber}</td>
-                    <td className="py-1">{row.departmentCompany}</td>
-                  </tr>
-                ))
-              )}
+              ))}
             </tbody>
           </table>
 

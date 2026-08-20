@@ -142,6 +142,7 @@ export function CrossingDetail({
         crossingId={crossing.id}
         vesselName={vesselLabel}
         crossing={crossing}
+        seatLayoutRef={vessel?.seat_layout_ref ?? "51-seats"}
       />
 
       <WhatsAppSummaryView

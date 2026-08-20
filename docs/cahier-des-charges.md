@@ -281,7 +281,7 @@ Rendu **déterministe** : un template fixe dans lequel les données saisies sont
 
 ### 9.2 Contenu précis — **résolu (v1.1), basé sur exemple réel fourni**
 Confirmé par le porteur de projet à partir d'un second exemple réel de manifeste rempli :
-- **Tableau des sièges dynamique** : contrairement au papier qui affiche toujours 51 lignes (même vides), le manifeste généré par PaxFlow n'affiche que les lignes correspondant aux **passagers réellement saisis** (Seat / Name / Company ID Number / Department ou Department+Company selon TM/CC) — pas de lignes vides.
+- **Tableau des sièges complet — révisé (2026-08-20) par le porteur de projet**, remplace le comportement précédent. Le manifeste affiche désormais **toutes les lignes de sièges du BIRD utilisé** (51 pour BIRD 1-8, 50 pour BIRD 9/10), **y compris les lignes vides pour les sièges non occupés** — exactement comme le document papier original. Colonnes : Seat / Name / Company ID Number / Department ou Department+Company selon TM/CC, vides pour les sièges sans passager. Objectif explicite : que le document généré soit un manifeste complet prêt à être posté tel quel, pas un extrait de liste de noms.
 - **Deux champs complémentaires, et rien d'autre** : nombre de Guests, et nom de la Marine Hostess (MH).
 - Le reste des informations de traversée (date, heures, ports, vessel) reste affiché en en-tête, comme précédemment spécifié en §6.
 - **Non inclus dans ce document généré** : la grille de codes/cases à cocher visible en haut à droite sur l'exemple papier fourni (ex. « FNB:☑1, HK:☑1, Rec:☑☑1... ») — il s'agit d'un usage interne de l'AB sans lien avec les règles métier de PaxFlow, non reproduit.

@@ -28,7 +28,7 @@ Prototype personnel : PWA offline-first pour un AB (Able Seaman) qui saisit les 
 
 **Manifeste et résumé — rendu déterministe uniquement (§9.1/§9.5)** :
 - Jamais de génération via un LLM pour le manifeste ou le résumé. Template fixe + données injectées telles quelles, sans reformulation.
-- Manifeste : tableau dynamique (uniquement les sièges occupés, pas de lignes vides), pas de logo d'entreprise.
+- Manifeste : tableau **complet** (toutes les lignes de sièges du BIRD, 51 ou 50, y compris les vides — révisé 2026-08-20, remplace l'ancien comportement "dynamique"), pas de logo d'entreprise.
 - Résumé WhatsApp : **deux messages séparés** (décision validée 2026-08-20), formats exacts en §8.1 du cahier des charges.
 
 **Rétention des données (§15.1/§4.7)** :
