@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getDb } from "@/lib/db";
 import type { LocalVessel } from "@/lib/db/schema";
@@ -18,6 +19,7 @@ export function VesselChooser({
   initialVessels: LocalVessel[];
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const router = useRouter();
 
   // Seed the local cache once on mount so the list keeps working offline on
   // the next visit, even without a service worker yet (§21 step 13 adds
@@ -77,10 +79,13 @@ export function VesselChooser({
       </ul>
 
       {selectedId && (
-        <p className="mt-4 text-center text-sm text-zinc-600 dark:text-zinc-400">
-          {sorted.find((v) => v.id === selectedId)?.name} sélectionné. Écran
-          de création de traversée à venir (§21, étape 6).
-        </p>
+        <button
+          type="button"
+          onClick={() => router.push(`/crossings/new?vessel=${selectedId}`)}
+          className="mt-4 w-full rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
+        >
+          Continuer avec {sorted.find((v) => v.id === selectedId)?.name}
+        </button>
       )}
     </div>
   );
