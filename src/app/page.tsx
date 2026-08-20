@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { signOut } from "./login/actions";
 import { VesselChooser } from "./vessel-chooser";
 import { toLocalVessel } from "@/lib/db/schema";
+import { SyncEngine } from "./sync-engine";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -26,6 +27,7 @@ export default async function Home() {
 
   return (
     <div className="flex flex-1 flex-col items-center gap-6 bg-zinc-50 px-6 py-8 dark:bg-black">
+      <SyncEngine userId={user.id} />
       <div className="flex w-full max-w-sm items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { CrossingDetail } from "./crossing-detail";
+import { SyncEngine } from "../../sync-engine";
 
 export default async function CrossingPage({
   params,
@@ -26,6 +27,7 @@ export default async function CrossingPage({
 
   return (
     <div className="flex flex-1 flex-col items-center bg-zinc-50 px-6 py-8 dark:bg-black">
+      <SyncEngine userId={user.id} />
       <CrossingDetail
         crossingId={id}
         userId={user.id}
