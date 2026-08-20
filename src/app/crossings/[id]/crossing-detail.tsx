@@ -5,7 +5,13 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { getDb } from "@/lib/db";
 import { SeatMap } from "./seat-map";
 
-export function CrossingDetail({ crossingId }: { crossingId: string }) {
+export function CrossingDetail({
+  crossingId,
+  userId,
+}: {
+  crossingId: string;
+  userId: string;
+}) {
   // Dexie's .get() resolves to undefined both while a query is pending and
   // when the row genuinely doesn't exist — wrap it so those two states
   // stay distinguishable instead of showing "Chargement…" forever for a
@@ -98,6 +104,7 @@ export function CrossingDetail({ crossingId }: { crossingId: string }) {
       <SeatMap
         crossingId={crossing.id}
         seatLayoutRef={vessel?.seat_layout_ref ?? "51-seats"}
+        userId={userId}
       />
 
       <Link

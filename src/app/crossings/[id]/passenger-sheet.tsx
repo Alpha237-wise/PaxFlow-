@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getDb } from "@/lib/db";
+import type { LocalKnownPerson } from "@/lib/db/schema";
+import { rememberPerson, searchKnownPeople } from "@/lib/known-people";
 import {
   resolveClassification,
   type Classification,
@@ -11,10 +13,12 @@ import {
 export function PassengerSheet({
   crossingId,
   seatNumber,
+  userId,
   onClose,
 }: {
   crossingId: string;
   seatNumber: number;
+  userId: string;
   onClose: () => void;
 }) {
   const existing = useLiveQuery(
@@ -57,8 +61,33 @@ export function PassengerSheet({
     }
   }, [existing]);
 
+  const [suggestions, setSuggestions] = useState<LocalKnownPerson[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Mémoire intelligente (§4.5): suggest known people after 2-3 characters.
+  useEffect(() => {
+    let active = true;
+    searchKnownPeople(userId, name).then((results) => {
+      if (active) setSuggestions(results);
+    });
+    return () => {
+      active = false;
+    };
+  }, [userId, name]);
+
+  function selectSuggestion(person: LocalKnownPerson) {
+    setForm({
+      name: person.name,
+      companyIdNumber: person.company_id_number ?? "",
+      department: person.department ?? "",
+      companyName: person.company_name ?? "",
+    });
+    setShowSuggestions(false);
+  }
+
   function setName(value: string) {
     setForm((f) => ({ ...f, name: value }));
+    setShowSuggestions(true);
   }
   function setCompanyIdNumber(value: string) {
     setForm((f) => ({ ...f, companyIdNumber: value }));
@@ -97,6 +126,13 @@ export function PassengerSheet({
       sync_status: "pending",
     });
 
+    await rememberPerson(userId, {
+      name: name.trim(),
+      companyIdNumber: companyIdNumber.trim() || null,
+      department: department.trim() || null,
+      companyName: companyName.trim() || null,
+    });
+
     onClose();
   }
 
@@ -124,7 +160,7 @@ export function PassengerSheet({
         </div>
 
         <form onSubmit={handleSave} className="space-y-3">
-          <div>
+          <div className="relative">
             <label
               htmlFor="passengerName"
               className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
@@ -136,10 +172,35 @@ export function PassengerSheet({
               type="text"
               required
               autoFocus
+              autoComplete="off"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setShowSuggestions(false)}
               className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-base dark:border-zinc-700 dark:bg-zinc-800"
             />
+            {showSuggestions && suggestions.length > 0 && (
+              <ul className="absolute z-10 mt-1 w-full rounded-md border border-zinc-300 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-800">
+                {suggestions.map((person) => (
+                  <li key={person.id}>
+                    <button
+                      type="button"
+                      onMouseDown={() => selectSuggestion(person)}
+                      className="block w-full px-3 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                    >
+                      <span className="font-medium text-zinc-900 dark:text-zinc-50">
+                        {person.name}
+                      </span>
+                      <span className="ml-2 text-xs text-zinc-500 dark:text-zinc-400">
+                        {[person.department, person.company_name]
+                          .filter(Boolean)
+                          .join(" / ") || "—"}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           <div>

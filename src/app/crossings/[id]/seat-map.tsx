@@ -10,9 +10,11 @@ import { PassengerSheet } from "./passenger-sheet";
 export function SeatMap({
   crossingId,
   seatLayoutRef,
+  userId,
 }: {
   crossingId: string;
   seatLayoutRef: "51-seats" | "50-seats";
+  userId: string;
 }) {
   const [openSeat, setOpenSeat] = useState<number | null>(null);
 
@@ -75,6 +77,7 @@ export function SeatMap({
           key={openSeat}
           crossingId={crossingId}
           seatNumber={openSeat}
+          userId={userId}
           onClose={() => setOpenSeat(null)}
         />
       )}

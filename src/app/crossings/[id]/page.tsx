@@ -20,7 +20,7 @@ export default async function CrossingPage({
 
   return (
     <div className="flex flex-1 flex-col items-center bg-zinc-50 px-6 py-8 dark:bg-black">
-      <CrossingDetail crossingId={id} />
+      <CrossingDetail crossingId={id} userId={user.id} />
     </div>
   );
 }
