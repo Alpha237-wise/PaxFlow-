@@ -4,13 +4,16 @@ import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getDb } from "@/lib/db";
 import { SeatMap } from "./seat-map";
+import { CrewGuestsForm } from "./crew-guests-form";
 
 export function CrossingDetail({
   crossingId,
   userId,
+  abDefaultName,
 }: {
   crossingId: string;
   userId: string;
+  abDefaultName: string | null;
 }) {
   // Dexie's .get() resolves to undefined both while a query is pending and
   // when the row genuinely doesn't exist — wrap it so those two states
@@ -105,6 +108,18 @@ export function CrossingDetail({
         crossingId={crossing.id}
         seatLayoutRef={vessel?.seat_layout_ref ?? "51-seats"}
         userId={userId}
+      />
+
+      <CrewGuestsForm
+        key={crossing.id}
+        crossingId={crossing.id}
+        userId={userId}
+        abDefaultName={abDefaultName}
+        initialCaptainOnBoard={crossing.captain_on_board}
+        initialMechanic={crossing.mechanic}
+        initialAbName={crossing.ab_name}
+        initialMarineHostess={crossing.marine_hostess}
+        initialTotalGuests={crossing.total_guests}
       />
 
       <Link
