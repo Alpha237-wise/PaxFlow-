@@ -18,6 +18,7 @@
 import { createClient } from "./supabase/client";
 import { getDb } from "./db";
 import { toLocalVessel } from "./db/schema";
+import { pullManifestTemplate } from "./manifest-template";
 
 // sync_status is local-only bookkeeping — Supabase's schema has no such
 // column, so it must be stripped before upserting.
@@ -358,6 +359,11 @@ export async function runSync(userId: string): Promise<void> {
   // the whole workflow, so this cache matters more than anything else
   // here being fully up to date yet.
   await pullVessels();
+
+  // Same reasoning as vessels: the manifest template is reference data
+  // every crossing needs to export, so cache it early rather than after
+  // the push/pull cycle below.
+  await pullManifestTemplate();
 
   // Crossings before passengers: passengers.crossing_id is a foreign key,
   // the parent row must exist server-side first.

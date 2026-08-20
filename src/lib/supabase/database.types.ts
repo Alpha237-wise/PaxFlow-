@@ -231,6 +231,38 @@ export type Database = {
           },
         ]
       }
+      manifest_template: {
+        Row: {
+          created_at: string
+          id: string
+          storage_path: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          storage_path: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          storage_path?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manifest_template_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       passengers: {
         Row: {
           classification_computed: string
@@ -344,6 +376,7 @@ export type Database = {
     }
     Functions: {
       current_role: { Args: never; Returns: string }
+      purge_expired_crossings: { Args: never; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

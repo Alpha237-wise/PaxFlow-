@@ -107,6 +107,18 @@ export interface LocalKnownCrew {
   sync_status: SyncStatus;
 }
 
+// Cached copy of the shared manifest reference photo/PDF (one global row,
+// key fixed to "current" — mirrors the single-row design of the Supabase
+// manifest_template table). Stores the Blob directly; IndexedDB supports
+// this natively. Enables offline manifest generation once the template
+// has been fetched at least once (§16.7 pattern — see vessels/known_people).
+export interface LocalManifestTemplate {
+  id: "current";
+  blob: Blob;
+  storage_path: string;
+  updated_at: string;
+}
+
 // Local-only tombstone queue: a manual delete (History screen, "Clear my
 // history", "Full reset" — §4.7) removes the row from Dexie immediately
 // for instant UI feedback, but the matching Supabase row can only be

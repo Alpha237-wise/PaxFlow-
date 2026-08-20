@@ -6,6 +6,7 @@ import type {
   LocalKnownPerson,
   LocalKnownCrew,
   LocalPendingDelete,
+  LocalManifestTemplate,
 } from "./schema";
 
 export class PaxFlowDB extends Dexie {
@@ -15,6 +16,7 @@ export class PaxFlowDB extends Dexie {
   known_people!: EntityTable<LocalKnownPerson, "id">;
   known_crew!: EntityTable<LocalKnownCrew, "id">;
   pending_deletes!: EntityTable<LocalPendingDelete, "id">;
+  manifest_template!: EntityTable<LocalManifestTemplate, "id">;
 
   constructor() {
     super("paxflow");
@@ -35,6 +37,17 @@ export class PaxFlowDB extends Dexie {
       known_people: "id, owner_id, name",
       known_crew: "id, owner_id, role",
       pending_deletes: "id, table_name",
+    });
+    // v3: adds manifest_template (photo-overlay manifest, §9 rewrite) —
+    // again purely additive.
+    this.version(3).stores({
+      vessels: "id, name",
+      crossings: "id, created_by, vessel_id, sync_status, expires_at",
+      passengers: "id, crossing_id, sync_status, &[crossing_id+seat_number]",
+      known_people: "id, owner_id, name",
+      known_crew: "id, owner_id, role",
+      pending_deletes: "id, table_name",
+      manifest_template: "id",
     });
   }
 }

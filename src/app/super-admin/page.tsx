@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { MANIFEST_TEMPLATE_BUCKET } from "@/lib/manifest-template";
 import { updateUserRole, updateVesselStatus } from "./actions";
+import { ManifestTemplateUpload } from "./manifest-template-upload";
 
 function vesselNumber(name: string): number {
   const match = /\d+/.exec(name);
@@ -52,6 +54,19 @@ export default async function SuperAdminPage() {
     .select("*")
     .order("created_at", { ascending: false })
     .limit(50);
+
+  const { data: manifestTemplate } = await supabase
+    .from("manifest_template")
+    .select("storage_path, updated_at")
+    .maybeSingle();
+
+  let manifestTemplatePreviewUrl: string | null = null;
+  if (manifestTemplate) {
+    const { data: signed } = await supabase.storage
+      .from(MANIFEST_TEMPLATE_BUCKET)
+      .createSignedUrl(manifestTemplate.storage_path, 300);
+    manifestTemplatePreviewUrl = signed?.signedUrl ?? null;
+  }
 
   return (
     <div className="flex flex-1 flex-col items-center bg-zinc-50 px-6 py-8 dark:bg-black">
@@ -145,6 +160,12 @@ export default async function SuperAdminPage() {
             ))}
           </ul>
         </section>
+
+        <ManifestTemplateUpload
+          userId={user.id}
+          currentPreviewUrl={manifestTemplatePreviewUrl}
+          currentUpdatedAt={manifestTemplate?.updated_at ?? null}
+        />
 
         <section className="space-y-2">
           <h2 className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
