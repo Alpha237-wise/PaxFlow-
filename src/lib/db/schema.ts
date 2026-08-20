@@ -64,6 +64,27 @@ export interface LocalPassenger {
   sync_status: SyncStatus;
 }
 
+// Same narrowing need as toLocalVessel, for passenger rows read straight
+// from Supabase (e.g. the admin supervision screens, which query the
+// server directly rather than Dexie — §21 step 15). No sync_status here:
+// that's local-only bookkeeping these rows never had.
+export function toPassengerRow(row: {
+  id: string;
+  crossing_id: string;
+  seat_number: number;
+  name: string;
+  company_id_number: string | null;
+  department: string | null;
+  company_name: string | null;
+  classification_computed: string;
+  classification_final: string;
+  classification_overridden: boolean;
+  created_at: string;
+  updated_at: string;
+}): Omit<LocalPassenger, "sync_status"> {
+  return row as Omit<LocalPassenger, "sync_status">;
+}
+
 export interface LocalKnownPerson {
   id: string;
   owner_id: string;
