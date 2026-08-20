@@ -5,6 +5,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { getDb } from "@/lib/db";
 import { SeatMap } from "./seat-map";
 import { CrewGuestsForm } from "./crew-guests-form";
+import { SummaryView } from "./summary-view";
 
 export function CrossingDetail({
   crossingId,
@@ -121,6 +122,8 @@ export function CrossingDetail({
         initialMarineHostess={crossing.marine_hostess}
         initialTotalGuests={crossing.total_guests}
       />
+
+      <SummaryView crossingId={crossing.id} />
 
       <Link
         href="/"
