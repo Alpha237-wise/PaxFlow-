@@ -17,6 +17,7 @@
 // correct functions.
 import { createClient } from "./supabase/client";
 import { getDb } from "./db";
+import { toLocalVessel } from "./db/schema";
 
 // sync_status is local-only bookkeeping — Supabase's schema has no such
 // column, so it must be stripped before upserting.
@@ -85,6 +86,29 @@ async function pushKnownCrew(): Promise<void> {
     } catch {
       // Network unreachable.
     }
+  }
+}
+
+// Reference data (read-only for regular users) — but unlike known_people/
+// known_crew this had NO independent pull path before: it was only ever
+// seeded into Dexie via the initialVessels prop the "/" Server Component
+// happened to pass down on a successful load. If that load's cache never
+// landed (first-ever visit with a flaky connection, or the service worker
+// hadn't captured "/" yet), vessels stayed empty in IndexedDB forever and
+// the BIRD chooser — the very first step of the workflow — had nothing to
+// show offline. Confirmed as a real bug 2026-08-20; this closes the gap
+// the same way known_people/known_crew already work.
+async function pullVessels(): Promise<void> {
+  const db = getDb();
+  const supabase = createClient();
+  try {
+    const { data, error } = await supabase
+      .from("vessels")
+      .select("id, name, total_seats, status, seat_layout_ref");
+    if (error || !data) return;
+    await db.vessels.bulkPut(data.map(toLocalVessel));
+  } catch {
+    // Network unreachable.
   }
 }
 
@@ -204,6 +228,11 @@ async function pullKnownCrew(userId: string): Promise<void> {
 }
 
 export async function runSync(userId: string): Promise<void> {
+  // Vessels first and on its own: the BIRD chooser is the first screen of
+  // the whole workflow, so this cache matters more than anything else
+  // here being fully up to date yet.
+  await pullVessels();
+
   // Crossings before passengers: passengers.crossing_id is a foreign key,
   // the parent row must exist server-side first.
   await pushCrossings();
