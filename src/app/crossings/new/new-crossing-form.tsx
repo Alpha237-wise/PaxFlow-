@@ -95,9 +95,17 @@ export function NewCrossingForm({
 
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4">
-      <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-        New crossing
-      </h1>
+      <div>
+        <Link
+          href="/"
+          className="text-sm font-medium text-zinc-600 underline dark:text-zinc-400"
+        >
+          ← Back to Choose BIRD
+        </Link>
+        <h1 className="mt-1 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          New crossing
+        </h1>
+      </div>
 
       <div>
         <label

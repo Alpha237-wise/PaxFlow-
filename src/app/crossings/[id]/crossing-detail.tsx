@@ -62,6 +62,17 @@ export function CrossingDetail({
 
   return (
     <div className="w-full max-w-sm space-y-4">
+      <Link
+        href={
+          crossing.vessel_id
+            ? `/crossings/new?vessel=${crossing.vessel_id}`
+            : "/"
+        }
+        className="inline-block text-sm font-medium text-zinc-600 underline dark:text-zinc-400"
+      >
+        ← Back to New crossing
+      </Link>
+
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
           {vesselLabel}
@@ -148,7 +159,7 @@ export function CrossingDetail({
         href="/"
         className="block text-center text-sm font-medium text-zinc-900 underline dark:text-zinc-50"
       >
-        Back to home
+        Home
       </Link>
     </div>
   );
