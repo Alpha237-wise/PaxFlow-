@@ -88,6 +88,75 @@ async function pushKnownCrew(): Promise<void> {
   }
 }
 
+async function pullCrossings(userId: string): Promise<void> {
+  const db = getDb();
+  const supabase = createClient();
+  try {
+    // Explicitly scoped to this user's own crossings, not whatever RLS
+    // additionally allows an admin/super_admin to SELECT — "my history"
+    // must only ever cache locally what's actually mine (§13.2).
+    const { data, error } = await supabase
+      .from("crossings")
+      .select("*")
+      .eq("created_by", userId);
+    if (error || !data) return;
+
+    for (const r of data) {
+      const local = await db.crossings.get(r.id);
+      if (!local || new Date(r.updated_at) > new Date(local.updated_at)) {
+        await db.crossings.put({
+          ...r,
+          status: r.status as "draft" | "finalized",
+          sync_status: "synced",
+        });
+      }
+    }
+  } catch {
+    // Network unreachable.
+  }
+}
+
+async function pullPassengers(crossingIds: string[]): Promise<void> {
+  if (crossingIds.length === 0) return;
+  const db = getDb();
+  const supabase = createClient();
+  try {
+    const { data, error } = await supabase
+      .from("passengers")
+      .select("*")
+      .in("crossing_id", crossingIds);
+    if (error || !data) return;
+
+    for (const r of data) {
+      const local = await db.passengers.get(r.id);
+      if (!local || new Date(r.updated_at) > new Date(local.updated_at)) {
+        await db.passengers.put({
+          ...r,
+          classification_computed: r.classification_computed as "TM" | "CC",
+          classification_final: r.classification_final as "TM" | "CC",
+          sync_status: "synced",
+        });
+      }
+    }
+  } catch {
+    // Network unreachable.
+  }
+}
+
+// Mirrors the server-side 30-day purge (§15.1) locally, so a device's own
+// history view honestly reflects the retention window even between syncs.
+// The server-side pg_cron job is the actual source of truth for deletion;
+// this just keeps the local cache from drifting out of sync with it.
+export async function purgeExpiredLocal(): Promise<void> {
+  const db = getDb();
+  const now = new Date().toISOString();
+  const expired = await db.crossings.where("expires_at").below(now).toArray();
+  for (const c of expired) {
+    await db.passengers.where("crossing_id").equals(c.id).delete();
+    await db.crossings.delete(c.id);
+  }
+}
+
 async function pullKnownPeople(userId: string): Promise<void> {
   const db = getDb();
   const supabase = createClient();
@@ -141,6 +210,19 @@ export async function runSync(userId: string): Promise<void> {
   await pushPassengers();
   await pushKnownPeople();
   await pushKnownCrew();
+
+  // Pull remote crossings/passengers for "historique personnel (local +
+  // distant fusionnés)" — §21 step 14. Re-read local crossing ids after
+  // pulling so passengers are fetched for the full merged set, not just
+  // whatever was newly pulled this round.
+  await pullCrossings(userId);
+  const myCrossingIds = (
+    await getDb().crossings.where("created_by").equals(userId).toArray()
+  ).map((c) => c.id);
+  await pullPassengers(myCrossingIds);
+
   await pullKnownPeople(userId);
   await pullKnownCrew(userId);
+
+  await purgeExpiredLocal();
 }

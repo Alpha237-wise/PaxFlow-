@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "./login/actions";
 import { VesselChooser } from "./vessel-chooser";
@@ -37,14 +38,22 @@ export default async function Home() {
             {profile?.full_name || user.email} ({profile?.role ?? "user"})
           </p>
         </div>
-        <form action={signOut}>
-          <button
-            type="submit"
+        <div className="flex items-center gap-2">
+          <Link
+            href="/history"
             className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs text-zinc-700 dark:border-zinc-700 dark:text-zinc-300"
           >
-            Sign out
-          </button>
-        </form>
+            History
+          </Link>
+          <form action={signOut}>
+            <button
+              type="submit"
+              className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs text-zinc-700 dark:border-zinc-700 dark:text-zinc-300"
+            >
+              Sign out
+            </button>
+          </form>
+        </div>
       </div>
 
       <VesselChooser initialVessels={(vessels ?? []).map(toLocalVessel)} />
