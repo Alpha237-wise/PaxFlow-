@@ -13,6 +13,19 @@ export interface LocalVessel {
   seat_layout_ref: "51-seats" | "50-seats";
 }
 
+// Supabase's generated types widen CHECK-constrained text columns to plain
+// `string` (only real Postgres enums produce literal unions) — narrow at
+// the boundary instead of loosening LocalVessel's type everywhere it's used.
+export function toLocalVessel(row: {
+  id: string;
+  name: string;
+  total_seats: number;
+  status: string;
+  seat_layout_ref: string;
+}): LocalVessel {
+  return row as LocalVessel;
+}
+
 export interface LocalCrossing {
   id: string;
   vessel_id: string | null;

@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import type { Database } from "@/lib/supabase/database.types";
 
 // Refreshes the Supabase auth session cookie on every request so a signed-in
 // AB stays logged in. See docs/cahier-des-charges.md §16.7 — this only runs
@@ -9,7 +10,7 @@ import type { NextRequest } from "next/server";
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
-  const supabase = createServerClient(
+  const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
