@@ -45,6 +45,10 @@ Les Server Components Next.js s'exécutent côté serveur : ils exigent que l'ap
 
 **Mais tout l'enchaînement opérationnel critique du §16.7** (choix du BIRD utilisé en mer, création de traversée, plan des sièges, classification, synthèse, résumé, manifeste — §21 étapes 5 à 12) **doit être construit en Client Components** qui chargent leurs données de référence une fois (ex. liste des vessels) puis travaillent uniquement contre IndexedDB (Dexie.js, §16.1) une fois l'app shell mis en cache par le Service Worker. Ne pas transformer ces écrans en Server Components avec fetch Supabase à chaque navigation — ça romprait le fonctionnement hors-ligne exigé par les critères d'acceptation (§19).
 
+## Piège de test — Vercel Deployment Protection
+
+Les URLs uniques de déploiement (`paxflow-<hash>-alpha237-wise1.vercel.app`) sont protégées par la Vercel Deployment Protection (SSO Vercel), ce qui casse les `fetch()` internes (dont le Service Worker) avec des erreurs CORS pointant vers `vercel.com/sso-api`. **Toujours tester en conditions réelles sur l'URL stable `https://paxflow-hazel.vercel.app`** (non protégée), ou en local (`npm run dev` / `npm run build && npm run start`). Ce n'était pas un bug applicatif (§21 étape 13, 2026-08-20) — le moteur de sync fonctionnait, seule l'URL de test était en cause.
+
 ## Ordre d'implémentation
 
 Suivre l'ordre du §21 du cahier des charges sauf instruction contraire explicite du porteur de projet.
