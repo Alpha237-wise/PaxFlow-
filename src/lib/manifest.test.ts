@@ -7,6 +7,9 @@ const crossing = {
   time_of_arrival: "10:30",
   port_of_origin: "Island",
   destination: "Skyourk",
+  captain_on_board: "Sayeesh",
+  mechanic: "Dinesh",
+  ab_name: "Alpha",
   marine_hostess: "Sarah",
   total_guests: 2,
 };
@@ -14,8 +17,8 @@ const crossing = {
 describe("buildManifestData (§9.2, revised 2026-08-20: full seat table, no longer dynamic)", () => {
   it("shows every seat of the layout, in order, occupied or not", () => {
     const passengers: ManifestPassenger[] = [
-      { seat_number: 5, name: "B", company_id_number: null, department: "FNB", company_name: null },
-      { seat_number: 1, name: "A", company_id_number: null, department: "FNB", company_name: null },
+      { seat_number: 5, name: "B", company_id_number: null, department: "FNB", company_name: null, classification_final: "TM" },
+      { seat_number: 1, name: "A", company_id_number: null, department: "FNB", company_name: null, classification_final: "TM" },
     ];
     const result = buildManifestData(crossing, "BIRD 1", passengers, "51-seats");
     expect(result.rows).toHaveLength(51);
@@ -44,30 +47,38 @@ describe("buildManifestData (§9.2, revised 2026-08-20: full seat table, no long
 
   it("shows department alone for a TM row, department/company for a CC row", () => {
     const passengers: ManifestPassenger[] = [
-      { seat_number: 1, name: "TM Person", company_id_number: "123", department: "FNB", company_name: null },
-      { seat_number: 2, name: "CC Person", company_id_number: null, department: "Kit", company_name: "UHS" },
+      { seat_number: 1, name: "TM Person", company_id_number: "123", department: "FNB", company_name: null, classification_final: "TM" },
+      { seat_number: 2, name: "CC Person", company_id_number: null, department: "Kit", company_name: "UHS", classification_final: "CC" },
     ];
     const result = buildManifestData(crossing, "BIRD 1", passengers, "51-seats");
     expect(result.rows[0]).toMatchObject({ companyIdNumber: "123", departmentCompany: "FNB" });
     expect(result.rows[1]).toMatchObject({ companyIdNumber: "", departmentCompany: "Kit/UHS" });
   });
 
-  it("carries header fields through, including marine hostess and guests, defaulting nulls to empty strings", () => {
+  it("carries header and crew/totals fields through, defaulting nulls to empty strings", () => {
     const result = buildManifestData(
-      { ...crossing, time_of_arrival: null, total_guests: null },
+      { ...crossing, time_of_arrival: null, total_guests: null, mechanic: null },
       "BIRD 1",
       [],
       "51-seats",
     );
     expect(result.timeOfArrival).toBe("");
     expect(result.totalGuests).toBe("");
+    expect(result.mechanic).toBe("");
     expect(result.marineHostess).toBe("Sarah");
+    expect(result.captainOnBoard).toBe("Sayeesh");
+    expect(result.abName).toBe("Alpha");
     expect(result.vesselName).toBe("BIRD 1");
   });
 
-  it("shows the actually-entered marine hostess and guest count", () => {
-    const result = buildManifestData(crossing, "BIRD 1", [], "51-seats");
-    expect(result.marineHostess).toBe("Sarah");
-    expect(result.totalGuests).toBe("2");
+  it("computes Total No. of TM and Total No. of Contractors from the passenger list", () => {
+    const passengers: ManifestPassenger[] = [
+      { seat_number: 1, name: "A", company_id_number: "1", department: "FNB", company_name: null, classification_final: "TM" },
+      { seat_number: 2, name: "B", company_id_number: "2", department: "FNB", company_name: null, classification_final: "TM" },
+      { seat_number: 3, name: "C", company_id_number: null, department: null, company_name: "Valet", classification_final: "CC" },
+    ];
+    const result = buildManifestData(crossing, "BIRD 1", passengers, "51-seats");
+    expect(result.totalTM).toBe("2");
+    expect(result.totalContractors).toBe("1");
   });
 });

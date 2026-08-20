@@ -1,7 +1,7 @@
 // Données du manifeste — docs/cahier-des-charges.md §9. Pure function: the
 // rendering layer (manifest-view.tsx) just injects these values into a
 // fixed template, never reformulating them (§9.5 — no alteration).
-import { formatDepartmentCompany } from "./crossing-summary";
+import { formatDepartmentCompany, summarizeCrossing } from "./crossing-summary";
 
 export interface ManifestPassenger {
   seat_number: number;
@@ -9,6 +9,7 @@ export interface ManifestPassenger {
   company_id_number: string | null;
   department: string | null;
   company_name: string | null;
+  classification_final: "TM" | "CC";
 }
 
 export interface ManifestRow {
@@ -25,8 +26,13 @@ export interface ManifestData {
   timeOfArrival: string;
   portOfOrigin: string;
   destination: string;
+  captainOnBoard: string;
+  mechanic: string;
+  abName: string;
   marineHostess: string;
   totalGuests: string;
+  totalTM: string;
+  totalContractors: string;
   rows: ManifestRow[];
 }
 
@@ -36,6 +42,9 @@ export interface ManifestCrossingInput {
   time_of_arrival: string | null;
   port_of_origin: string | null;
   destination: string | null;
+  captain_on_board: string | null;
+  mechanic: string | null;
+  ab_name: string | null;
   marine_hostess: string | null;
   total_guests: number | null;
 }
@@ -71,6 +80,8 @@ export function buildManifestData(
     });
   }
 
+  const summary = summarizeCrossing(passengers);
+
   return {
     vesselName,
     date: crossing.crossing_date,
@@ -78,8 +89,13 @@ export function buildManifestData(
     timeOfArrival: crossing.time_of_arrival ?? "",
     portOfOrigin: crossing.port_of_origin ?? "",
     destination: crossing.destination ?? "",
+    captainOnBoard: crossing.captain_on_board ?? "",
+    mechanic: crossing.mechanic ?? "",
+    abName: crossing.ab_name ?? "",
     marineHostess: crossing.marine_hostess ?? "",
     totalGuests: crossing.total_guests != null ? String(crossing.total_guests) : "",
+    totalTM: String(summary.totalTM),
+    totalContractors: String(summary.totalCC),
     rows,
   };
 }

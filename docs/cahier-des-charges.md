@@ -279,21 +279,22 @@ Le résumé est affiché à l'écran avant toute action de copie/partage — l'A
 ### 9.1 Principe
 Rendu **déterministe** : un template fixe dans lequel les données saisies sont injectées programmatiquement (pas de génération par un modèle génératif d'image ou de texte).
 
-### 9.2 Contenu précis — **résolu (v1.1), basé sur exemple réel fourni**
-Confirmé par le porteur de projet à partir d'un second exemple réel de manifeste rempli :
-- **Tableau des sièges complet — révisé (2026-08-20) par le porteur de projet**, remplace le comportement précédent. Le manifeste affiche désormais **toutes les lignes de sièges du BIRD utilisé** (51 pour BIRD 1-8, 50 pour BIRD 9/10), **y compris les lignes vides pour les sièges non occupés** — exactement comme le document papier original. Colonnes : Seat / Name / Company ID Number / Department ou Department+Company selon TM/CC, vides pour les sièges sans passager. Objectif explicite : que le document généré soit un manifeste complet prêt à être posté tel quel, pas un extrait de liste de noms.
-- **Deux champs complémentaires, et rien d'autre** : nombre de Guests, et nom de la Marine Hostess (MH).
-- Le reste des informations de traversée (date, heures, ports, vessel) reste affiché en en-tête, comme précédemment spécifié en §6.
-- **Non inclus dans ce document généré** : la grille de codes/cases à cocher visible en haut à droite sur l'exemple papier fourni (ex. « FNB:☑1, HK:☑1, Rec:☑☑1... ») — il s'agit d'un usage interne de l'AB sans lien avec les règles métier de PaxFlow, non reproduit.
-- Captain on board / Mechanic / AB restent enregistrés en base (§7) mais n'apparaissent pas nécessairement sur ce document individuel — ils sont utilisés pour le résumé WhatsApp (§8.1, ligne "Capt ... team").
+### 9.2 Contenu précis — **révisé (2026-08-20) : réplique fidèle du papier vierge**
+Le porteur de projet a fourni une photo du formulaire papier **vierge** (`docs/reference/seat-plan-blank-manifest.jpg`) et demandé une reproduction fidèle de sa mise en page, dans le but explicite de remplacer complètement la photo du papier rempli à la main comme pièce jointe WhatsApp. Ceci **remplace** la version précédente de cette section (tableau "dynamique" limité aux passagers saisis, et Captain/Mechanic/AB absents du document) :
+
+- **En-tête traversée**, disposé en 2 colonnes × 3 lignes comme sur le papier : (Date, Vessel Name), (Time of Departure, Time of Arrival), (Part of Origin, Destination).
+- **Tableau des sièges complet, en DEUX blocs côte à côte** (pas un seul tableau vertical) : bloc gauche = sièges 1 à 25, bloc droit = sièges 26 à la fin (51 pour BIRD 1-8, 50 pour BIRD 9/10) — reproduit la disposition physique du papier. **Toutes les lignes sont affichées**, y compris les sièges non occupés (lignes vides) — ce n'est plus un tableau dynamique limité aux passagers réellement saisis. Colonnes par bloc : Seat / Name / Company ID Number / Department ou Department+Company selon TM/CC.
+- **Bloc équipage et totaux en bas**, avec les valeurs réellement saisies : Captain on board, Mechanic, AB, Marine Hostess, Total No. of TM, Total No. of Guest, Total No. of Contractors No. (= total CC). Ceci **annule** la précédente décision qui excluait Captain/Mechanic/AB du document généré (ils n'étaient utilisés que pour le résumé WhatsApp) — ils apparaissent désormais aussi sur le manifeste.
+- **Non inclus** (confirmé, inchangé) : la grille de codes/cases à cocher visible en haut à droite sur l'exemple papier rempli (usage interne de l'AB, sans lien avec les règles métier de PaxFlow).
+- **Optionnel/bonus, non bloquant** : le petit diagramme de position des sièges (grille de cases numérotées, §5) visible en bas à droite du papier — peut être ajouté plus tard si le temps le permet, ne bloque pas la V1 de cet écran.
 
 ### 9.3 Formats de sortie
 - **PDF** : pour archivage, généré côté client (voir §16.1/16.7 — fonctionnement hors-ligne), jamais par un LLM.
 - **Image (PNG/JPG)** : rendu du même template pour partage rapide.
 
 ### 9.4 Contraintes visuelles V1
-- **Pas de logo**, pas d'identité graphique de l'entreprise. Un en-tête neutre type « PaxFlow — Manifest » suffit.
-- Structure inspirée de la mise en page papier (colonnes Seat / Name / Company ID Number / Department), mais **redimensionnée dynamiquement** au nombre réel de passagers (§9.2) plutôt que reproduite à l'identique avec ses 51 lignes fixes.
+- **Pas de logo**, pas d'identité graphique de l'entreprise. Un en-tête neutre type « PaxFlow — Manifest » suffit — inchangé malgré la reproduction fidèle de la mise en page papier par ailleurs.
+- Structure et disposition alignées sur la mise en page papier (voir §9.2) : en-tête 2 colonnes, tableau des sièges en 2 blocs côte à côte (format large/paysage), bloc équipage et totaux en bas.
 
 ### 9.5 Fiabilité
 Aucune altération possible des données injectées : le template est un gabarit figé, les données viennent strictement de la base/du stockage local, aucune reformulation ou "amélioration" automatique du texte saisi (nom, matricule) n'est appliquée.

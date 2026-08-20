@@ -3,11 +3,77 @@
 import { useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getDb } from "@/lib/db";
-import { buildManifestData, type ManifestCrossingInput } from "@/lib/manifest";
+import {
+  buildManifestData,
+  type ManifestCrossingInput,
+  type ManifestRow,
+} from "@/lib/manifest";
 
 // Fixed pixel width, independent of the viewport: this element is exported
 // as an image/PDF, not viewed responsively (§9.4 — deterministic template).
-const MANIFEST_WIDTH = 800;
+// Wider than a single-column layout needs, to fit the two side-by-side
+// seat blocks that mirror the paper form's landscape layout (§9.2, revised
+// 2026-08-20 from a reference photo of the blank paper template).
+const MANIFEST_WIDTH = 1100;
+
+// The paper template splits the writing table at seat 25/26 regardless of
+// how many seats the boat actually has (confirmed for the 51-seat layout
+// from the reference photo; applied the same way to the unconfirmed
+// 50-seat layout, consistent with §5's existing placeholder note).
+const LEFT_BLOCK_MAX_SEAT = 25;
+
+// Simplified reconstruction of the company mark seen on the paper
+// template (docs/reference/seat-plan-blank-manifest.jpg), redrawn as line
+// art from that photo rather than extracted as a pixel crop — explicit
+// request from the project owner (2026-08-20) to include it, overriding
+// §9.4's original "no logo" rule for this employee-built internal tool.
+function CompanyLogo() {
+  return (
+    <div className="flex flex-col items-center text-center">
+      <svg viewBox="0 0 140 100" width="70" height="50" aria-hidden="true">
+        <g fill="none" stroke="black" strokeWidth={2.2} strokeLinecap="round">
+          <path d="M 22 88 C 6 84, 2 70, 4 54" />
+          <path d="M 22 88 C 8 55, 18 20, 50 5" />
+          <path d="M 22 88 C 35 55, 65 40, 98 34" />
+          <path d="M 22 88 C 55 84, 88 82, 110 68" />
+        </g>
+      </svg>
+      <p className="mt-1 text-[9px] font-medium tracking-wide">
+        BANANA ISLAND RESORT DOHA
+      </p>
+      <p className="text-[9px] tracking-wide text-zinc-600">BY ANANTARA</p>
+    </div>
+  );
+}
+
+function SeatTable({ rows }: { rows: ManifestRow[] }) {
+  return (
+    <table className="w-full border-collapse text-xs">
+      <thead>
+        <tr className="border-b border-black">
+          <th className="py-0.5 pr-1 text-left font-semibold">Seat</th>
+          <th className="py-0.5 pr-1 text-left font-semibold">Name</th>
+          <th className="py-0.5 pr-1 text-left font-semibold">
+            Company ID Number
+          </th>
+          <th className="py-0.5 text-left font-semibold">
+            Department/Company
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr key={row.seat} className="border-b border-zinc-200">
+            <td className="py-0.5 pr-1">{row.seat}</td>
+            <td className="py-0.5 pr-1">{row.name}</td>
+            <td className="py-0.5 pr-1">{row.companyIdNumber}</td>
+            <td className="py-0.5">{row.departmentCompany}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
 
 export function ManifestView({
   crossingId,
@@ -34,6 +100,9 @@ export function ManifestView({
     passengers ?? [],
     seatLayoutRef,
   );
+
+  const leftRows = manifest.rows.filter((r) => r.seat <= LEFT_BLOCK_MAX_SEAT);
+  const rightRows = manifest.rows.filter((r) => r.seat > LEFT_BLOCK_MAX_SEAT);
 
   async function toPngDataUrl(): Promise<{ url: string; width: number; height: number }> {
     const node = manifestRef.current;
@@ -119,40 +188,51 @@ export function ManifestView({
             </div>
           </div>
 
-          <table className="mt-4 w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-black">
-                <th className="py-1 text-left font-semibold">Seat</th>
-                <th className="py-1 text-left font-semibold">Name</th>
-                <th className="py-1 text-left font-semibold">
-                  Company ID Number
-                </th>
-                <th className="py-1 text-left font-semibold">
-                  Department/Company
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {manifest.rows.map((row) => (
-                <tr key={row.seat} className="border-b border-zinc-200">
-                  <td className="py-1">{row.seat}</td>
-                  <td className="py-1">{row.name}</td>
-                  <td className="py-1">{row.companyIdNumber}</td>
-                  <td className="py-1">{row.departmentCompany}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="mt-4 flex gap-6">
+            <div className="flex-1">
+              <SeatTable rows={leftRows} />
+            </div>
+            <div className="flex-1">
+              <SeatTable rows={rightRows} />
+            </div>
+          </div>
 
-          <div className="mt-4 flex justify-between text-sm">
-            <div>
-              <span className="text-zinc-500">MH: </span>
-              {manifest.marineHostess}
+          <div className="mt-4 flex items-end justify-between gap-6">
+            <div className="grid grid-cols-2 gap-x-6 text-sm">
+              <div className="space-y-0.5">
+                <div>
+                  <span className="text-zinc-500">Captain on board: </span>
+                  {manifest.captainOnBoard}
+                </div>
+                <div>
+                  <span className="text-zinc-500">Mechanic: </span>
+                  {manifest.mechanic}
+                </div>
+                <div>
+                  <span className="text-zinc-500">AB: </span>
+                  {manifest.abName}
+                </div>
+                <div>
+                  <span className="text-zinc-500">Marine Hostess: </span>
+                  {manifest.marineHostess}
+                </div>
+              </div>
+              <div className="space-y-0.5">
+                <div>
+                  <span className="text-zinc-500">Total No. of TM: </span>
+                  {manifest.totalTM}
+                </div>
+                <div>
+                  <span className="text-zinc-500">Total No. of Guest: </span>
+                  {manifest.totalGuests}
+                </div>
+                <div>
+                  <span className="text-zinc-500">Total No. of Contractors No.: </span>
+                  {manifest.totalContractors}
+                </div>
+              </div>
             </div>
-            <div>
-              <span className="text-zinc-500">Total No. of Guest: </span>
-              {manifest.totalGuests}
-            </div>
+            <CompanyLogo />
           </div>
         </div>
       </div>

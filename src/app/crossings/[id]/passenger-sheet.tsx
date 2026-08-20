@@ -213,8 +213,15 @@ export function PassengerSheet({
             <input
               id="companyIdNumber"
               type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               value={companyIdNumber}
-              onChange={(e) => setCompanyIdNumber(e.target.value)}
+              onChange={(e) =>
+                // Digits only — prevents accidentally typing the
+                // department here instead (§4.1's classification rule
+                // depends on this field only ever holding a matricule).
+                setCompanyIdNumber(e.target.value.replace(/\D/g, ""))
+              }
               placeholder="blank for Director/Manager/new joiner"
               className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-base dark:border-zinc-700 dark:bg-zinc-800"
             />
@@ -231,8 +238,13 @@ export function PassengerSheet({
               <input
                 id="department"
                 type="text"
+                pattern="[A-Za-z\s]*"
                 value={department}
-                onChange={(e) => setDepartment(e.target.value)}
+                onChange={(e) =>
+                  // Letters only — prevents accidentally typing the
+                  // matricule here instead of in Company ID Number.
+                  setDepartment(e.target.value.replace(/[0-9]/g, ""))
+                }
                 placeholder="e.g. FNB, Kit, Eng"
                 className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-base dark:border-zinc-700 dark:bg-zinc-800"
               />
