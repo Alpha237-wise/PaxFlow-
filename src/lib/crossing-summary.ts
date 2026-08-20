@@ -30,14 +30,23 @@ function tmGroupLabel(p: PassengerForSummary): string {
   return normalize(p.department) || "—";
 }
 
-// CC combines department + company when both are set ("Kit/UHS"), or falls
+// Combines department + company when both are set ("Kit/UHS"), or falls
 // back to whichever one is present ("Valet" alone has no department) —
-// confirmed against the real WhatsApp example, docs/cahier-des-charges.md §4.1.
+// confirmed against the real WhatsApp example, docs/cahier-des-charges.md
+// §4.1. Exported for reuse by the manifest's per-row column (§21 step 12,
+// §9.2 — "Department ou Department+Company selon TM/CC").
+export function formatDepartmentCompany(
+  department: string | null,
+  companyName: string | null,
+): string {
+  const d = normalize(department);
+  const c = normalize(companyName);
+  if (d && c) return `${d}/${c}`;
+  return c || d || "—";
+}
+
 function ccGroupLabel(p: PassengerForSummary): string {
-  const department = normalize(p.department);
-  const company = normalize(p.company_name);
-  if (department && company) return `${department}/${company}`;
-  return company || department || "—";
+  return formatDepartmentCompany(p.department, p.company_name);
 }
 
 // Groups are merged case-insensitively (§4.3) but displayed using the

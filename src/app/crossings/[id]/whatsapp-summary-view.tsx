@@ -108,8 +108,11 @@ export function WhatsAppSummaryView({
       <MessageBlock label="Message 1" text={message1} canShare={canShare} />
       <MessageBlock label="Message 2" text={message2} canShare={canShare} />
       <p className="text-xs text-zinc-500 dark:text-zinc-400">
-        Le manifeste (image/PDF) en pièce jointe du Message 1 arrive à
-        l&apos;étape suivante (§21, étape 12).
+        Pour joindre le manifeste au Message 1 : télécharge-le ci-dessous
+        (Image ou PDF), puis ajoute-le dans WhatsApp juste après avoir
+        partagé ce texte (§8.2 — pièce jointe manuelle, le format de
+        partage du texte seul ne permet pas toujours d&apos;attacher un
+        fichier automatiquement).
       </p>
     </div>
   );
