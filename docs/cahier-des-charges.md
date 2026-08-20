@@ -108,6 +108,7 @@ Pour rendre cette règle fiable sans recourir à une case dédiée ni à une dé
 - Aucune case « Director/Manager » n'est nécessaire : un Director/Manager ou un new joiner sans matricule est naturellement classé TM dès lors qu'aucune compagnie externe n'est renseignée — ce qui est le cas puisqu'ils appartiennent en interne à un département.
 - La classification calculée est toujours affichée mais **modifiable manuellement** par l'AB (champ `classification_override`), pour les cas exceptionnels qui ne suivraient pas la règle. Le système conserve la classification calculée ET la classification finale retenue, à des fins d'audit (voir §14).
 - Cette scission en 2 champs reste rapide à saisir (2 champs texte courts au lieu d'un seul) et supprime toute ambiguïté d'interprétation pour le moteur, contrairement à une détection de mots-clés dans un champ unique.
+- **Confirmé (2026-08-20) par un exemple réel** (`docs/reference/whatsapp-summary-example.jpg`) : le résumé WhatsApp observé (39TM/12cc) correspond exactement à cette règle — les entrées "département seul, sans compagnie" (ex. "7fnb", "3Eng") sont comptées TM, les entrées "compagnie" ou "département/compagnie" (ex. "1valet", "1kit/uhs") sont comptées CC. Sur le papier, l'AB combine parfois département et compagnie en une seule notation abrégée ("Kit/UHS") — dans l'app, l'AB doit bien saisir "Kit" dans `department` et "UHS" dans `company_name` séparément, pas la chaîne combinée dans un seul champ.
 
 ### 4.2 Guests — **révisé (v1.1) : non prioritaire**
 - Champ numérique optionnel par traversée : `total_guests`. Aucune donnée individuelle.
@@ -142,11 +143,19 @@ En complément de la purge automatique à 30 jours (§15.1, qui ne concerne que 
 
 ## 5. Sièges et flotte — modèle détaillé
 
-D'après le document de référence :
+**Confirmé (2026-08-20) à partir des photos réelles du manifeste papier** (`docs/reference/seat-plan-blank-manifest.jpg` et `seat-plan-filled-example.jpg`) — remplace la description approximative de la v1.0/v1.2, qui était basée sur une explication textuelle avant réception des photos.
 
-- Plan de gauche (sièges 1 à 25) : disposition en paires (1-2, 3-4 … jusqu'à 24-25), 13 rangées.
-- Plan de droite (sièges 26 à 51) : disposition à 3 par rangée sur les premières rangées (ex. 1-2 / puis triplets 19-20-21, 22-23-24, 25-26-27… jusqu'à 50-51), reflétant une configuration réelle de cabine avec allée centrale.
-- Le plan exact (colonnes/rangées/allée) tel que dessiné sur le document sera repris comme gabarit visuel du composant « Seat Map » du prototype, adapté pour une utilisation tactile (boutons larges, un seul tap pour sélectionner un siège vide, tap pour éditer un siège occupé).
+Le plan de sièges réel (gabarit `51-seats`, BIRD 1 à 8) est composé de **3 blocs**, dans l'ordre où ils apparaissent sur le bateau à partir du poste de pilotage (« BOAT CAPTAIN ») :
+
+| Bloc | Sièges | Disposition |
+|---|---|---|
+| A (près du capitaine) | 1 à 18 | 9 rangées de 2 sièges (paires) : (1,2), (3,4) … (17,18) |
+| B (au centre) | 19 à 33 | 5 rangées de 3 sièges (triplets) : (19,20,21), (22,23,24) … (31,32,33) |
+| C | 34 à 51 | 9 rangées de 2 sièges (paires) : (34,35), (36,37) … (50,51) |
+
+Total : 18 + 15 + 18 = 51 sièges. C'est ce layout qui sert de gabarit visuel au composant « Seat Map » (boutons larges, un seul tap pour sélectionner un siège vide, tap pour éditer un siège occupé — voir §16.6).
+
+**Gabarit `50-seats` (BIRD 9 et 10) : non confirmé par photo, approximation provisoire.** En l'absence de photo de référence pour cette variante, le gabarit reprend la même structure que le 51 places en retirant un siège au bloc C (8 paires + 1 siège seul au lieu de 9 paires). À corriger dès qu'une photo réelle du plan BIRD 9/10 est disponible — décision explicite du porteur de projet : « on pourra modifier après » (2026-08-20).
 
 ### 5.1 Modèle de données proposé pour la flotte
 ```

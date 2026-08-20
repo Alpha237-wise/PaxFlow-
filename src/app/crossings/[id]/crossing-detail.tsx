@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getDb } from "@/lib/db";
+import { SeatMap } from "./seat-map";
 
 export function CrossingDetail({ crossingId }: { crossingId: string }) {
   // Dexie's .get() resolves to undefined both while a query is pending and
@@ -94,9 +95,10 @@ export function CrossingDetail({ crossingId }: { crossingId: string }) {
         </dd>
       </dl>
 
-      <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">
-        Plan des sièges à venir (§21, étape 7).
-      </p>
+      <SeatMap
+        crossingId={crossing.id}
+        seatLayoutRef={vessel?.seat_layout_ref ?? "51-seats"}
+      />
 
       <Link
         href="/"
