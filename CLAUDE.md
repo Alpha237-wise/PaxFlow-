@@ -39,6 +39,12 @@ Prototype personnel : PWA offline-first pour un AB (Able Seaman) qui saisit les 
 - RLS Postgres sur toutes les tables utilisateur, jamais de sécurité reposant sur le masquage UI seul (§13).
 - `SUPABASE_SERVICE_ROLE_KEY` jamais exposée côté client.
 
+## Contrainte d'architecture — Server Components vs offline (important, à ne pas casser)
+
+Les Server Components Next.js s'exécutent côté serveur : ils exigent que l'appareil atteigne le serveur Vercel, ce qui est impossible en pleine mer sans réseau, même avec un Service Worker qui met en cache l'app shell. `/login` et `/` (dashboard léger) sont volontairement des Server Components car ils supposent déjà une connexion (connexion initiale, écran d'accueil informatif).
+
+**Mais tout l'enchaînement opérationnel critique du §16.7** (choix du BIRD utilisé en mer, création de traversée, plan des sièges, classification, synthèse, résumé, manifeste — §21 étapes 5 à 12) **doit être construit en Client Components** qui chargent leurs données de référence une fois (ex. liste des vessels) puis travaillent uniquement contre IndexedDB (Dexie.js, §16.1) une fois l'app shell mis en cache par le Service Worker. Ne pas transformer ces écrans en Server Components avec fetch Supabase à chaque navigation — ça romprait le fonctionnement hors-ligne exigé par les critères d'acceptation (§19).
+
 ## Ordre d'implémentation
 
 Suivre l'ordre du §21 du cahier des charges sauf instruction contraire explicite du porteur de projet.
