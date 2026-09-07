@@ -67,18 +67,30 @@ function PhotoOverlayManifest({
 
   function seatRows(rows: ManifestRow[], block: typeof LEFT_SEAT_BLOCK) {
     return rows.map((row, i) => {
-      const yPct = seatRowYPct(block, i, rows.length);
+      // Each column gets its own yPct — the reference scan's row height
+      // itself drifts slightly across a block's width (paper/perspective
+      // warp, not a clean rotation), so Name/Company ID/Department don't
+      // share a single row-center y (see manifest-template-calibration.ts).
+      const nameYPct = seatRowYPct(block.name, i, rows.length);
+      const companyIdYPct = seatRowYPct(block.companyId, i, rows.length);
+      const departmentYPct = seatRowYPct(block.department, i, rows.length);
       // Seat number is already printed on the reference form — re-drawing
       // it would only ever sit adjacent to (never exactly under) the
       // printed digit, since it's a different font/renderer, so it's left
       // out entirely rather than overlaid.
       return (
         <div key={row.seat}>
-          <span style={fieldStyle({ xPct: block.nameXPct, yPct }, "middle")}>{row.name}</span>
-          <span style={fieldStyle({ xPct: block.companyIdXPct, yPct }, "middle")}>
+          <span style={fieldStyle({ xPct: block.name.xPct, yPct: nameYPct }, "middle")}>
+            {row.name}
+          </span>
+          <span
+            style={fieldStyle({ xPct: block.companyId.xPct, yPct: companyIdYPct }, "middle")}
+          >
             {row.companyIdNumber}
           </span>
-          <span style={fieldStyle({ xPct: block.departmentXPct, yPct }, "middle")}>
+          <span
+            style={fieldStyle({ xPct: block.department.xPct, yPct: departmentYPct }, "middle")}
+          >
             {row.departmentCompany}
           </span>
         </div>
