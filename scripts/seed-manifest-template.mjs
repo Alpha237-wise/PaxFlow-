@@ -23,7 +23,11 @@ const fileBytes = readFileSync("reference/manifest-template-final.png");
 
 const { error: uploadError } = await admin.storage
   .from(BUCKET)
-  .upload(STORAGE_PATH, fileBytes, { upsert: true, contentType: "image/png" });
+  .upload(STORAGE_PATH, fileBytes, {
+    upsert: true,
+    contentType: "image/png",
+    cacheControl: "0",
+  });
 if (uploadError) throw uploadError;
 
 const { data: superAdmin, error: findError } = await admin

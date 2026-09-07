@@ -23,7 +23,16 @@ import {
 // as an image/PDF, not viewed responsively (§9.4 — deterministic template).
 const MANIFEST_WIDTH = 1100;
 
-function fieldStyle(pos: FieldPosition): CSSProperties {
+// vAlign "line" (default) sits the text's bottom edge on yPct — right for
+// the header/footer fields, calibrated against a printed blank underline
+// (a handwritten value sits just above the line). vAlign "middle" centers
+// the text on yPct instead — required for the seat table, where yPct is
+// calibrated as the vertical CENTER of each printed row band, not a line
+// to sit above; using "line" there shifted every field up by ~half a
+// text-line, visible as a doubled/blurred look against the row's own
+// printed seat number (2026-09-07 field report).
+function fieldStyle(pos: FieldPosition, vAlign: "line" | "middle" = "line"): CSSProperties {
+  const vPct = vAlign === "middle" ? -50 : -100;
   const base: CSSProperties = {
     position: "absolute",
     top: `${pos.yPct}%`,
@@ -33,12 +42,12 @@ function fieldStyle(pos: FieldPosition): CSSProperties {
     color: "black",
   };
   if (pos.align === "right") {
-    return { ...base, right: `${100 - pos.xPct}%`, textAlign: "right", transform: "translateY(-100%)" };
+    return { ...base, right: `${100 - pos.xPct}%`, textAlign: "right", transform: `translateY(${vPct}%)` };
   }
   if (pos.align === "center") {
-    return { ...base, left: `${pos.xPct}%`, textAlign: "center", transform: "translate(-50%, -100%)" };
+    return { ...base, left: `${pos.xPct}%`, textAlign: "center", transform: `translate(-50%, ${vPct}%)` };
   }
-  return { ...base, left: `${pos.xPct}%`, textAlign: "left", transform: "translateY(-100%)" };
+  return { ...base, left: `${pos.xPct}%`, textAlign: "left", transform: `translateY(${vPct}%)` };
 }
 
 // Overlays data as absolutely-positioned text on top of the real
@@ -59,14 +68,17 @@ function PhotoOverlayManifest({
   function seatRows(rows: ManifestRow[], block: typeof LEFT_SEAT_BLOCK) {
     return rows.map((row, i) => {
       const yPct = seatRowYPct(block, i, rows.length);
+      // Seat number is already printed on the reference form — re-drawing
+      // it would only ever sit adjacent to (never exactly under) the
+      // printed digit, since it's a different font/renderer, so it's left
+      // out entirely rather than overlaid.
       return (
         <div key={row.seat}>
-          <span style={fieldStyle({ xPct: block.seatXPct, yPct })}>{row.seat}</span>
-          <span style={fieldStyle({ xPct: block.nameXPct, yPct })}>{row.name}</span>
-          <span style={fieldStyle({ xPct: block.companyIdXPct, yPct })}>
+          <span style={fieldStyle({ xPct: block.nameXPct, yPct }, "middle")}>{row.name}</span>
+          <span style={fieldStyle({ xPct: block.companyIdXPct, yPct }, "middle")}>
             {row.companyIdNumber}
           </span>
-          <span style={fieldStyle({ xPct: block.departmentXPct, yPct })}>
+          <span style={fieldStyle({ xPct: block.departmentXPct, yPct }, "middle")}>
             {row.departmentCompany}
           </span>
         </div>
@@ -219,7 +231,11 @@ function CodedTemplateManifest({ manifest }: { manifest: ManifestData }) {
   );
 }
 
-export function ManifestView({
+// Shared by the prominent quick-action bar (top of the crossing page) and
+// the full preview section (bottom) — called once in CrossingDetail so both
+// act on the same manifestRef/busy state instead of each re-rendering (and
+// re-exporting) their own copy of the manifest.
+export function useManifestExport({
   crossingId,
   vesselName,
   crossing,
@@ -305,6 +321,61 @@ export function ManifestView({
     }
   }
 
+  return { manifest, templateUrl, manifestRef, busy, handleDownloadPdf, handleDownloadImage };
+}
+
+export type ManifestExport = ReturnType<typeof useManifestExport>;
+
+// Prominent, always-reachable call to action — placed near the top of the
+// crossing page (before the seat map/crew form/summary) so downloading the
+// filled manifest never requires scrolling past the whole page to find it.
+// The full preview + a second copy of these buttons still lives lower down
+// (ManifestPreviewSection) for anyone who wants to eyeball it first; both
+// share this same state so there's no duplicate export work.
+export function ManifestQuickActions({
+  busy,
+  handleDownloadPdf,
+  handleDownloadImage,
+}: Pick<ManifestExport, "busy" | "handleDownloadPdf" | "handleDownloadImage">) {
+  return (
+    <div className="w-full max-w-sm rounded-lg border-2 border-zinc-900 bg-white p-3 dark:border-zinc-50 dark:bg-zinc-950">
+      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Manifest</p>
+      <p className="mb-2 text-xs text-zinc-500 dark:text-zinc-400">
+        Download the filled manifest for this crossing
+      </p>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={handleDownloadPdf}
+          disabled={busy !== null}
+          className="flex-1 rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
+        >
+          {busy === "pdf" ? "Generating…" : "Download PDF"}
+        </button>
+        <button
+          type="button"
+          onClick={handleDownloadImage}
+          disabled={busy !== null}
+          className="flex-1 rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300"
+        >
+          {busy === "image" ? "Generating…" : "Download Image"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Full visual preview (photo overlay or coded fallback) plus its own copy
+// of the download buttons, for the reader who scrolled this far and wants
+// to check the rendered manifest before grabbing it.
+export function ManifestPreviewSection({
+  manifest,
+  templateUrl,
+  manifestRef,
+  busy,
+  handleDownloadPdf,
+  handleDownloadImage,
+}: ManifestExport) {
   return (
     <div className="w-full max-w-sm space-y-3">
       <h2 className="text-sm font-medium text-zinc-600 dark:text-zinc-400">

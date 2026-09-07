@@ -63,11 +63,18 @@ export async function uploadManifestTemplate(
 ): Promise<{ error: string | null }> {
   const supabase = createClient();
 
+  // cacheControl: "0" — this path is a fixed well-known name ("current.png")
+  // that gets overwritten in place on every replace, and the app already
+  // does its own freshness check via manifest_template.updated_at before
+  // deciding to re-download at all (pullManifestTemplate). An HTTP-level
+  // cache on top of that only adds a way for a replaced template to look
+  // "stuck" on stale bytes for up to its max-age, with no upside.
   const { error: uploadError } = await supabase.storage
     .from(MANIFEST_TEMPLATE_BUCKET)
     .upload(MANIFEST_TEMPLATE_STORAGE_PATH, blob, {
       upsert: true,
       contentType: blob.type || "image/png",
+      cacheControl: "0",
     });
   if (uploadError) return { error: uploadError.message };
 

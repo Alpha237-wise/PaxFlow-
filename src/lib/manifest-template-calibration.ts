@@ -45,7 +45,6 @@ export const FOOTER_FIELDS = {
 } as const;
 
 export interface SeatBlockCalibration {
-  seatXPct: number;
   nameXPct: number;
   companyIdXPct: number;
   departmentXPct: number;
@@ -57,23 +56,37 @@ export interface SeatBlockCalibration {
 // seat-layouts.ts's boat seating diagram, which is a different grid printed
 // lower on the page). Always split left block = seats 1-25, right block =
 // seats 26..N — confirmed from the reference PDF, true for both the
-// 51-seat and 50-seat layouts.
+// 51-seat and 50-seat layouts. No seatXPct: the seat number is already
+// printed on the reference form and is deliberately never redrawn (see
+// manifest-view.tsx's seatRows) — overlaying it only produced a doubled/
+// blurred look next to the printed digit.
+//
+// firstRowYPct/lastRowYPct are the row-CENTER y of the block's first and
+// last printed row, each independently measured from its own printed
+// boundary lines (row1 top=612px / row25 bottom=2769px for the left block;
+// row26 top=646px / row51 bottom=2721px for the right, at the 4246x3000
+// render scale) — the two blocks have genuinely different row heights
+// (~86.3px vs ~79.8px: the paper fits 26 rows into the right block against
+// 25 on the left) and must NOT share one pair of endpoints. An earlier
+// version of this file copied the left block's endpoints onto the right
+// block; the per-row error that introduced grew linearly down the block
+// (correct only by coincidence around row ~40) instead of being a uniform
+// offset, which is what gave away that it was a wrong-endpoint bug rather
+// than non-uniform/non-linear row spacing (field report 2026-09-07).
 export const LEFT_SEAT_BLOCK: SeatBlockCalibration = {
-  seatXPct: 4.15,
   nameXPct: 6.48,
   companyIdXPct: 24.5,
   departmentXPct: 30.08,
   firstRowYPct: 21.84,
-  lastRowYPct: 91.08,
+  lastRowYPct: 90.86,
 };
 
 export const RIGHT_SEAT_BLOCK: SeatBlockCalibration = {
-  seatXPct: 39.52,
   nameXPct: 41.83,
   companyIdXPct: 58.43,
   departmentXPct: 63.97,
-  firstRowYPct: 21.84,
-  lastRowYPct: 91.08,
+  firstRowYPct: 22.86,
+  lastRowYPct: 89.37,
 };
 
 export const LEFT_BLOCK_MAX_SEAT = 25;

@@ -7,7 +7,27 @@ import { SeatMap } from "./seat-map";
 import { CrewGuestsForm } from "./crew-guests-form";
 import { SummaryView } from "./summary-view";
 import { WhatsAppSummaryView } from "./whatsapp-summary-view";
-import { ManifestView } from "./manifest-view";
+import {
+  useManifestExport,
+  ManifestQuickActions,
+  ManifestPreviewSection,
+} from "./manifest-view";
+
+// Placeholder ManifestCrossingInput used only while the real crossing is
+// still loading — useManifestExport must be called unconditionally (rules
+// of hooks), before we know whether `crossing` exists yet.
+const EMPTY_MANIFEST_CROSSING = {
+  crossing_date: "",
+  time_of_departure: null,
+  time_of_arrival: null,
+  port_of_origin: null,
+  destination: null,
+  captain_on_board: null,
+  mechanic: null,
+  ab_name: null,
+  marine_hostess: null,
+  total_guests: null,
+};
 
 export function CrossingDetail({
   crossingId,
@@ -34,13 +54,21 @@ export function CrossingDetail({
     [result?.crossing?.vessel_id],
   );
 
+  const crossing = result?.crossing;
+  const vesselLabel = crossing?.vessel_name_override || vessel?.name || "—";
+
+  const manifestExport = useManifestExport({
+    crossingId,
+    vesselName: vesselLabel,
+    crossing: crossing ?? EMPTY_MANIFEST_CROSSING,
+    seatLayoutRef: vessel?.seat_layout_ref ?? "51-seats",
+  });
+
   if (result === undefined) {
     return (
       <p className="text-sm text-zinc-600 dark:text-zinc-400">Loading…</p>
     );
   }
-
-  const crossing = result.crossing;
 
   if (crossing === undefined) {
     return (
@@ -57,8 +85,6 @@ export function CrossingDetail({
       </div>
     );
   }
-
-  const vesselLabel = crossing.vessel_name_override || vessel?.name || "—";
 
   return (
     <div className="w-full max-w-sm space-y-4">
@@ -118,6 +144,12 @@ export function CrossingDetail({
         </dd>
       </dl>
 
+      <ManifestQuickActions
+        busy={manifestExport.busy}
+        handleDownloadPdf={manifestExport.handleDownloadPdf}
+        handleDownloadImage={manifestExport.handleDownloadImage}
+      />
+
       <SeatMap
         crossingId={crossing.id}
         seatLayoutRef={vessel?.seat_layout_ref ?? "51-seats"}
@@ -138,12 +170,7 @@ export function CrossingDetail({
 
       <SummaryView crossingId={crossing.id} />
 
-      <ManifestView
-        crossingId={crossing.id}
-        vesselName={vesselLabel}
-        crossing={crossing}
-        seatLayoutRef={vessel?.seat_layout_ref ?? "51-seats"}
-      />
+      <ManifestPreviewSection {...manifestExport} />
 
       <WhatsAppSummaryView
         crossingId={crossing.id}
