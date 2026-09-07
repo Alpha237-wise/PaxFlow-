@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { warpQuadToCanvas, type Point } from "@/lib/perspective-warp";
 import { uploadManifestTemplate } from "@/lib/manifest-template";
 
-// Output aspect ratio matches the calibration box in
-// manifest-template-calibration.ts (~1.528:1, measured from the reference
-// photo) — the overlay positions assume the stored template has this shape.
-const OUTPUT_WIDTH = 2000;
-const OUTPUT_HEIGHT = 1309;
+// Output aspect ratio matches reference/manifest-blank-template.pdf.pdf
+// rotated upright (4246x3000 at full render res, halved here) — the
+// calibration in manifest-template-calibration.ts was measured against
+// this shape, so replacing the template must keep the same ratio or the
+// overlay positions will drift.
+const OUTPUT_WIDTH = 2123;
+const OUTPUT_HEIGHT = 1500;
 
 type CornerPct = { x: number; y: number };
 
