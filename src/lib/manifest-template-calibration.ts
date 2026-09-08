@@ -29,19 +29,26 @@ export const HEADER_FIELDS = {
   destination: { xPct: 36.22, yPct: 14.97 } satisfies FieldPosition,
 } as const;
 
-// Crew + totals footer (right-hand side of the form). All right-aligned
-// against the printed ruled line's right end — confirmed by measurement
-// that every line ends at the same x (~92.7%, the crew-box's vertical
-// border), regardless of label width ("AB" vs "Total No. of Contractors
-// No."), so a single shared xPct anchors all seven.
+// Crew + totals footer (right-hand side of the form), all right-aligned.
+// All seven were originally anchored to a shared ~92.7% guessed from the
+// longest line (Total No. of Contractors No., which really does reach
+// close to the crew-box's vertical border) — imperceptible for the Total
+// fields' 1-2 digit values, but wrong for the four name fields, whose own
+// printed lines end noticeably earlier. Remeasured all seven individually
+// (Total No. of Contractors No.'s own line is visibly slanted — measured
+// at its right terminus) and pulled every anchor slightly further left of
+// even that real end (real handwriting doesn't run to the very end of a
+// blank line) plus a small upward nudge so text clears the line's own
+// stroke thickness instead of sitting on/overlapping it (field reports
+// 2026-09-08).
 export const FOOTER_FIELDS = {
-  captainOnBoard: { xPct: 92.7, yPct: 65.37, align: "right" } satisfies FieldPosition,
-  mechanic: { xPct: 92.7, yPct: 68.87, align: "right" } satisfies FieldPosition,
-  abName: { xPct: 92.7, yPct: 72.33, align: "right" } satisfies FieldPosition,
-  marineHostess: { xPct: 92.7, yPct: 75.8, align: "right" } satisfies FieldPosition,
-  totalTM: { xPct: 92.7, yPct: 79.27, align: "right" } satisfies FieldPosition,
-  totalGuests: { xPct: 92.7, yPct: 82.7, align: "right" } satisfies FieldPosition,
-  totalContractors: { xPct: 92.7, yPct: 86.37, align: "right" } satisfies FieldPosition,
+  captainOnBoard: { xPct: 90.86, yPct: 65.2, align: "right" } satisfies FieldPosition,
+  mechanic: { xPct: 90.93, yPct: 68.7, align: "right" } satisfies FieldPosition,
+  abName: { xPct: 89.68, yPct: 72.17, align: "right" } satisfies FieldPosition,
+  marineHostess: { xPct: 89.5, yPct: 75.63, align: "right" } satisfies FieldPosition,
+  totalTM: { xPct: 88.6, yPct: 79.1, align: "right" } satisfies FieldPosition,
+  totalGuests: { xPct: 87.89, yPct: 82.53, align: "right" } satisfies FieldPosition,
+  totalContractors: { xPct: 91.05, yPct: 86.63, align: "right" } satisfies FieldPosition,
 } as const;
 
 // xPct is where this field's text renders; firstRowYPct/lastRowYPct are
