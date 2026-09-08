@@ -23,6 +23,28 @@ import {
 // as an image/PDF, not viewed responsively (§9.4 — deterministic template).
 const MANIFEST_WIDTH = 1100;
 
+// Injected text's font size as a fraction of MANIFEST_WIDTH, not a fixed
+// px value — so it scales with the actual export resolution (the
+// downloaded PDF/image, effectively MANIFEST_WIDTH * toPng's pixelRatio)
+// instead of silently staying tiny relative to a wider/higher-res render.
+// Field feedback was that the export looked too small to read without
+// zooming (2026-09-08). Two sizes, not one: Name plus every header/footer
+// field have generous room and go to 15px-at-1100, bold. Company Id
+// Number and Department/Company sit in much narrower printed columns —
+// measuring actual rendered text width in Chromium showed bold alone
+// (even at the ORIGINAL 13px) already pushed a realistic 8-char id or an
+// 18-char company name into the next column, so those two stay at 13px
+// AND regular weight, which is what actually keeps typical values from
+// overlapping (see the maxWidth clamps below for the genuinely-too-long
+// tail — the printed column is just too narrow for every possible value
+// regardless of styling, e.g. "Falcon Scaffolding").
+const FIELD_FONT_SIZE = MANIFEST_WIDTH * (15 / 1100);
+const SEAT_NARROW_COLUMN_FONT_SIZE = MANIFEST_WIDTH * (13 / 1100);
+
+// Dark blue, not black — injected data must read as distinct from the
+// form's own printed black text at a glance (2026-09-08 field report).
+const FIELD_TEXT_COLOR = "#0a2472";
+
 // vAlign "line" (default) sits the text's bottom edge on yPct — right for
 // the header/footer fields, calibrated against a printed blank underline
 // (a handwritten value sits just above the line). vAlign "middle" centers
@@ -31,15 +53,23 @@ const MANIFEST_WIDTH = 1100;
 // to sit above; using "line" there shifted every field up by ~half a
 // text-line, visible as a doubled/blurred look against the row's own
 // printed seat number (2026-09-07 field report).
-function fieldStyle(pos: FieldPosition, vAlign: "line" | "middle" = "line"): CSSProperties {
+function fieldStyle(
+  pos: FieldPosition,
+  vAlign: "line" | "middle" = "line",
+  options?: { fontSize?: number; fontWeight?: CSSProperties["fontWeight"]; maxWidthPx?: number },
+): CSSProperties {
   const vPct = vAlign === "middle" ? -50 : -100;
   const base: CSSProperties = {
     position: "absolute",
     top: `${pos.yPct}%`,
     whiteSpace: "nowrap",
-    fontSize: 13,
+    fontSize: options?.fontSize ?? FIELD_FONT_SIZE,
+    fontWeight: options?.fontWeight ?? 700,
     lineHeight: 1,
-    color: "black",
+    color: FIELD_TEXT_COLOR,
+    ...(options?.maxWidthPx !== undefined
+      ? { maxWidth: options.maxWidthPx, overflow: "hidden", textOverflow: "ellipsis" }
+      : null),
   };
   if (pos.align === "right") {
     return { ...base, right: `${100 - pos.xPct}%`, textAlign: "right", transform: `translateY(${vPct}%)` };
@@ -49,6 +79,14 @@ function fieldStyle(pos: FieldPosition, vAlign: "line" | "middle" = "line"): CSS
   }
   return { ...base, left: `${pos.xPct}%`, textAlign: "left", transform: `translateY(${vPct}%)` };
 }
+
+// Measured (Chromium, regular weight 13px — see above) available gap
+// before the next printed column starts, minus a small safety margin: a
+// backstop against visually colliding with the next field's text for a
+// longer-than-typical Company ID or Department/Company value.
+const COMPANY_ID_MAX_WIDTH = MANIFEST_WIDTH * (60 / 1100);
+const DEPARTMENT_MAX_WIDTH = MANIFEST_WIDTH * (88 / 1100);
+const SEAT_NARROW_COLUMN_WEIGHT: CSSProperties["fontWeight"] = 400;
 
 // Overlays data as absolutely-positioned text on top of the real
 // photographed/scanned paper form (§9 rewrite, 2026-08-20) — replaces the
@@ -84,12 +122,28 @@ function PhotoOverlayManifest({
             {row.name}
           </span>
           <span
-            style={fieldStyle({ xPct: block.companyId.xPct, yPct: companyIdYPct }, "middle")}
+            style={fieldStyle(
+              { xPct: block.companyId.xPct, yPct: companyIdYPct },
+              "middle",
+              {
+                fontSize: SEAT_NARROW_COLUMN_FONT_SIZE,
+                fontWeight: SEAT_NARROW_COLUMN_WEIGHT,
+                maxWidthPx: COMPANY_ID_MAX_WIDTH,
+              },
+            )}
           >
             {row.companyIdNumber}
           </span>
           <span
-            style={fieldStyle({ xPct: block.department.xPct, yPct: departmentYPct }, "middle")}
+            style={fieldStyle(
+              { xPct: block.department.xPct, yPct: departmentYPct },
+              "middle",
+              {
+                fontSize: SEAT_NARROW_COLUMN_FONT_SIZE,
+                fontWeight: SEAT_NARROW_COLUMN_WEIGHT,
+                maxWidthPx: DEPARTMENT_MAX_WIDTH,
+              },
+            )}
           >
             {row.departmentCompany}
           </span>
