@@ -102,6 +102,11 @@ console.log(
   cascadeAuditAfter,
 );
 
-// cleanup
-await admin.auth.admin.deleteUser(userId);
+// cleanup — audit_log.actor_id has no ON DELETE cascade/set-null, and
+// this script's whole point is generating audit_log rows for userId, so
+// deleteUser() would otherwise fail outright and leave this test account
+// behind (confirmed by an actual leftover left this way, 2026-09-10).
+await admin.from("audit_log").delete().eq("actor_id", userId);
+const { error: deleteUserErr } = await admin.auth.admin.deleteUser(userId);
+if (deleteUserErr) console.error("Failed to delete test user:", deleteUserErr.message);
 console.log("done, test user removed");

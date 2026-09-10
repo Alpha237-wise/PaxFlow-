@@ -27,6 +27,12 @@ if (ids.length > 0) {
   await admin.from("crossings").delete().in("created_by", ids);
   await admin.from("known_people").delete().in("owner_id", ids);
   await admin.from("known_crew").delete().in("owner_id", ids);
+  // audit_log.actor_id has no ON DELETE cascade/set-null — any of these
+  // accounts that ever did something audited (e.g. crossing.create) would
+  // otherwise make deleteUser() below fail outright, leaving it behind for
+  // yet another run of this script to find (confirmed by an actual
+  // leftover test-data-isolation.mjs left, 2026-09-10).
+  await admin.from("audit_log").delete().in("actor_id", ids);
 }
 
 for (const user of toDelete) {

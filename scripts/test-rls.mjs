@@ -61,8 +61,14 @@ async function cleanup(idA) {
     await admin.from("crossings").delete().in("id", createdCrossingIds);
   }
   if (idA) await admin.from("known_people").delete().eq("owner_id", idA);
+  // audit_log.actor_id has no ON DELETE cascade/set-null, so
+  // auth.admin.deleteUser() fails outright for A (whose crossing.create
+  // triggered an audit_log row) unless that's cleared first — confirmed by
+  // an actual leftover test-data-isolation.mjs left behind, 2026-09-10.
   for (const id of createdUserIds) {
-    await admin.auth.admin.deleteUser(id);
+    await admin.from("audit_log").delete().eq("actor_id", id);
+    const { error } = await admin.auth.admin.deleteUser(id);
+    if (error) console.error(`Failed to delete test user ${id}:`, error.message);
   }
 }
 
