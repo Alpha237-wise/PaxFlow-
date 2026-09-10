@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getDb } from "@/lib/db";
+import type { LocalCrossing } from "@/lib/db/schema";
 import { SeatMap } from "./seat-map";
 import { CrewGuestsForm } from "./crew-guests-form";
 import { SummaryView } from "./summary-view";
@@ -12,6 +14,99 @@ import {
   ManifestQuickActions,
   ManifestPreviewSection,
 } from "./manifest-view";
+
+// Tap-to-edit for the crossing header fields (BIRD/Date/Departure/Arrival/
+// Origin/Destination) — added 2026-09-10 so a mistake doesn't require
+// abandoning the crossing via "Back to New crossing" and starting over.
+// Writes straight through Dexie (via the onSave callback the caller
+// supplies), the same table WhatsAppSummaryView/useManifestExport already
+// read reactively — there's no separate cache for this data anywhere, so
+// a save here is immediately what the summary/manifest next generate
+// from, with no extra plumbing needed to keep them in sync.
+function EditableField({
+  value,
+  placeholder,
+  type = "text",
+  required = false,
+  onSave,
+  className = "",
+  inputClassName = "",
+}: {
+  value: string;
+  placeholder: string;
+  type?: "text" | "date" | "time";
+  required?: boolean;
+  onSave: (value: string) => void;
+  className?: string;
+  inputClassName?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!editing) return;
+    inputRef.current?.focus();
+    if (type !== "text") {
+      // Opens the native date/time picker immediately on tap instead of
+      // requiring a second tap into the now-focused input.
+      try {
+        inputRef.current?.showPicker?.();
+      } catch {
+        // Not supported in this browser — the input is still usable,
+        // just requires the user's own tap to open the picker.
+      }
+    }
+  }, [editing, type]);
+
+  function commit(raw: string) {
+    setEditing(false);
+    const next = type === "text" ? raw.trim() : raw;
+    if (required && !next) return; // revert to the previous value, never save blank
+    if (next !== value) onSave(next);
+  }
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        type={type}
+        value={draft}
+        onChange={(e) => {
+          setDraft(e.target.value);
+          // A date/time picker selection fully expresses intent on its
+          // own — commit right away rather than waiting for a blur that
+          // some mobile browsers delay until well after the picker closes.
+          if (type !== "text") commit(e.target.value);
+        }}
+        onBlur={() => {
+          if (type === "text") commit(draft);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.blur();
+          if (e.key === "Escape") {
+            setDraft(value);
+            setEditing(false);
+          }
+        }}
+        className={`w-full rounded border border-zinc-400 bg-white px-1.5 py-0.5 dark:border-zinc-600 dark:bg-zinc-800 ${inputClassName}`}
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        setDraft(value);
+        setEditing(true);
+      }}
+      className={`w-full border-b border-dashed border-zinc-300 text-left dark:border-zinc-700 ${className}`}
+    >
+      {value || placeholder}
+    </button>
+  );
+}
 
 // Placeholder ManifestCrossingInput used only while the real crossing is
 // still loading — useManifestExport must be called unconditionally (rules
@@ -92,6 +187,33 @@ export function CrossingDetail({
     );
   }
 
+  // Same bookkeeping crew-guests-form.tsx already does on save: mark
+  // pending so the next sync cycle pushes it, and clear any stale error
+  // since this row is about to be resent. WhatsAppSummaryView/
+  // useManifestExport read `crossing` straight from this same live query,
+  // so a write here is what they generate from on their very next render
+  // — no separate cache to invalidate.
+  async function updateCrossingField(
+    patch: Partial<
+      Pick<
+        LocalCrossing,
+        | "crossing_date"
+        | "time_of_departure"
+        | "time_of_arrival"
+        | "port_of_origin"
+        | "destination"
+        | "vessel_name_override"
+      >
+    >,
+  ) {
+    await getDb().crossings.update(crossingId, {
+      ...patch,
+      updated_at: new Date().toISOString(),
+      sync_status: "pending",
+      sync_error: null,
+    });
+  }
+
   return (
     <div className="w-full max-w-sm space-y-4">
       <Link
@@ -105,11 +227,24 @@ export function CrossingDetail({
         ← Back to New crossing
       </Link>
 
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-          {vesselLabel}
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="min-w-0 flex-1 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          <EditableField
+            value={crossing.vessel_name_override ?? vessel?.name ?? ""}
+            placeholder="BIRD name"
+            onSave={(v) => {
+              // Matches new-crossing-form.tsx's own convention: no
+              // override stored when it's just the vessel's own name, so
+              // an edit that reaffirms the default doesn't leave a
+              // redundant explicit value behind.
+              updateCrossingField({
+                vessel_name_override: v === vessel?.name ? null : v,
+              });
+            }}
+            inputClassName="text-lg font-semibold"
+          />
         </h1>
-        <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+        <span className="shrink-0 rounded-full bg-zinc-200 px-2 py-0.5 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
           {crossing.status === "draft" ? "Draft" : "Finalized"}
         </span>
       </div>
@@ -117,27 +252,51 @@ export function CrossingDetail({
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
         <dt className="text-zinc-500 dark:text-zinc-400">Date</dt>
         <dd className="text-zinc-900 dark:text-zinc-50">
-          {crossing.crossing_date}
+          <EditableField
+            value={crossing.crossing_date}
+            placeholder="—"
+            type="date"
+            required
+            onSave={(v) => updateCrossingField({ crossing_date: v })}
+          />
         </dd>
 
         <dt className="text-zinc-500 dark:text-zinc-400">Departure</dt>
         <dd className="text-zinc-900 dark:text-zinc-50">
-          {crossing.time_of_departure ?? "—"}
+          <EditableField
+            value={crossing.time_of_departure ?? ""}
+            placeholder="—"
+            type="time"
+            onSave={(v) => updateCrossingField({ time_of_departure: v || null })}
+          />
         </dd>
 
         <dt className="text-zinc-500 dark:text-zinc-400">Arrival</dt>
         <dd className="text-zinc-900 dark:text-zinc-50">
-          {crossing.time_of_arrival ?? "—"}
+          <EditableField
+            value={crossing.time_of_arrival ?? ""}
+            placeholder="—"
+            type="time"
+            onSave={(v) => updateCrossingField({ time_of_arrival: v || null })}
+          />
         </dd>
 
         <dt className="text-zinc-500 dark:text-zinc-400">Origin</dt>
         <dd className="text-zinc-900 dark:text-zinc-50">
-          {crossing.port_of_origin ?? "—"}
+          <EditableField
+            value={crossing.port_of_origin ?? ""}
+            placeholder="—"
+            onSave={(v) => updateCrossingField({ port_of_origin: v || null })}
+          />
         </dd>
 
         <dt className="text-zinc-500 dark:text-zinc-400">Destination</dt>
         <dd className="text-zinc-900 dark:text-zinc-50">
-          {crossing.destination ?? "—"}
+          <EditableField
+            value={crossing.destination ?? ""}
+            placeholder="—"
+            onSave={(v) => updateCrossingField({ destination: v || null })}
+          />
         </dd>
 
         <dt className="text-zinc-500 dark:text-zinc-400">Sync</dt>
