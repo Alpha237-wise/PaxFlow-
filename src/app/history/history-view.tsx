@@ -115,7 +115,7 @@ export function HistoryView({ userId }: { userId: string }) {
       </div>
 
       <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-        History is kept for 30 days — older crossings are automatically
+        History is kept for 24 hours — older crossings are automatically
         deleted (§15.1). You can also delete a crossing here at any time,
         or clear everything at once from your Profile.
       </p>

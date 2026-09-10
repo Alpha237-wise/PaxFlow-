@@ -26,7 +26,7 @@ function ClearHistorySection({ userId }: { userId: string }) {
       </h2>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
         Deletes all of your crossings and their passengers, right now —
-        instead of waiting for the automatic 30-day purge (§15.1). Does{" "}
+        instead of waiting for the automatic 24-hour purge (§15.1). Does{" "}
         <strong>not</strong> touch your memorized people/crew.
       </p>
 

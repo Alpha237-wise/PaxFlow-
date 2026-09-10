@@ -84,7 +84,7 @@ export function NewCrossingForm({
       ab_name: null,
       marine_hostess: null,
       total_guests: null,
-      expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       created_at: now,
       updated_at: now,
       sync_status: "pending",

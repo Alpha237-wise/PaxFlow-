@@ -32,7 +32,7 @@ Prototype personnel : PWA offline-first pour un AB (Able Seaman) qui saisit les 
 - Résumé WhatsApp : **deux messages séparés** (décision validée 2026-08-20), formats exacts en §8.1 du cahier des charges.
 
 **Rétention des données (§15.1/§4.7)** :
-- `crossings`/`passengers` : purge automatique à 30 jours (`expires_at`, cascade).
+- `crossings`/`passengers` : purge automatique à 24 heures (`expires_at`, cascade — changé de 30 jours à 24h le 2026-09-10, voir migration `20260910090000_crossings_retention_24h.sql`). La durée est fixée côté client à la création (`src/app/crossings/new/new-crossing-form.tsx`), pas seulement par le défaut de colonne — les deux doivent rester synchronisés.
 - `known_people`/`known_crew` (mémoire intelligente) : **jamais purgés automatiquement**, strictement privés par utilisateur (`owner_id`), persistent indéfiniment sauf réinitialisation manuelle explicite par l'utilisateur.
 - **Trois actions de suppression manuelle distinctes (implémentées 2026-08-20, ne jamais les fusionner)** : suppression d'une traversée individuelle (Historique) ; "Clear my history" (Profil, crossings+passengers uniquement) ; "Full reset" (Profil, + known_people/known_crew, confirmation "DELETE"). Toute suppression passe par `src/lib/sync.ts` (`deleteCrossing`/`clearMyHistory`/`resetAllMyData`) qui gère la table locale `pending_deletes` — ne jamais supprimer directement via Dexie sans passer par ces fonctions, sinon la ligne peut "ressusciter" au prochain pull si la suppression distante n'a pas encore eu lieu.
 
