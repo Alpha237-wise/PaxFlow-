@@ -4,13 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getDb } from "@/lib/db";
+import { todayLocalISODate } from "@/lib/date";
 import Link from "next/link";
-
-function todayLocalISODate(): string {
-  const now = new Date();
-  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 10);
-}
 
 export function NewCrossingForm({
   vesselId,

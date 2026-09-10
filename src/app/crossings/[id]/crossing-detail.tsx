@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getDb } from "@/lib/db";
 import type { LocalCrossing } from "@/lib/db/schema";
+import { todayLocalISODate } from "@/lib/date";
 import { SeatMap } from "./seat-map";
 import { CrewGuestsForm } from "./crew-guests-form";
 import { SummaryView } from "./summary-view";
@@ -133,6 +135,8 @@ export function CrossingDetail({
   userId: string;
   abDefaultName: string | null;
 }) {
+  const router = useRouter();
+
   // Dexie's .get() resolves to undefined both while a query is pending and
   // when the row genuinely doesn't exist — wrap it so those two states
   // stay distinguishable instead of showing "Loading…" forever for a
@@ -212,6 +216,48 @@ export function CrossingDetail({
       sync_status: "pending",
       sync_error: null,
     });
+  }
+
+  // "Next Crossing" (2026-09-10): stays on the same BIRD — chosen once,
+  // reused for a whole shift's back-to-back crossings — so this skips the
+  // "Choose BIRD" home screen entirely rather than routing through it
+  // again. Only Date/Time of Departure get a smart default (today, and
+  // this crossing's own arrival time as the next leg's likely departure);
+  // Origin/Destination/crew are left blank rather than guessed, since
+  // there's no similarly obvious default for those. Everything is still
+  // just an inline-edit tap away on the new crossing's own detail screen
+  // if the guess is wrong. To switch vessel instead, go back to Home, same
+  // as before — this shortcut is deliberately single-purpose.
+  async function handleNextCrossing() {
+    // Re-checked locally (already guaranteed true at the only call site,
+    // the button below): TS doesn't carry the outer undefined-check's
+    // narrowing into a nested function declaration's closure.
+    if (!crossing || !crossing.vessel_id) return;
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+    await getDb().crossings.add({
+      id,
+      vessel_id: crossing.vessel_id,
+      created_by: userId,
+      status: "draft",
+      crossing_date: todayLocalISODate(),
+      time_of_departure: crossing.time_of_arrival,
+      time_of_arrival: null,
+      port_of_origin: null,
+      destination: null,
+      vessel_name_override: crossing.vessel_name_override,
+      captain_on_board: null,
+      mechanic: null,
+      ab_name: null,
+      marine_hostess: null,
+      total_guests: null,
+      expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      created_at: now,
+      updated_at: now,
+      sync_status: "pending",
+      sync_error: null,
+    });
+    router.push(`/crossings/${id}`);
   }
 
   return (
@@ -370,6 +416,16 @@ export function CrossingDetail({
         captainOnBoard={crossing.captain_on_board}
         totalGuests={crossing.total_guests}
       />
+
+      {crossing.vessel_id && (
+        <button
+          type="button"
+          onClick={handleNextCrossing}
+          className="w-full rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
+        >
+          Next Crossing ({vesselLabel})
+        </button>
+      )}
 
       <Link
         href="/"
