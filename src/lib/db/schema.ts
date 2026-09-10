@@ -46,6 +46,14 @@ export interface LocalCrossing {
   created_at: string;
   updated_at: string;
   sync_status: SyncStatus;
+  // The real Postgrest error message from the last failed push, so a
+  // persistent "Sync error" can be diagnosed by reading this row instead
+  // of writing a one-off debug script against the live project (field
+  // report 2026-09-10 — pushCrossings() used to discard the error
+  // entirely). null once synced; also null while sync_status is
+  // "pending" and needs_reauth is true (see sync_meta) — in that case the
+  // push was skipped rather than attempted, so there's no per-row error.
+  sync_error: string | null;
 }
 
 export interface LocalPassenger {
@@ -62,12 +70,13 @@ export interface LocalPassenger {
   created_at: string;
   updated_at: string;
   sync_status: SyncStatus;
+  sync_error: string | null; // see LocalCrossing.sync_error
 }
 
 // Same narrowing need as toLocalVessel, for passenger rows read straight
 // from Supabase (e.g. the admin supervision screens, which query the
-// server directly rather than Dexie — §21 step 15). No sync_status here:
-// that's local-only bookkeeping these rows never had.
+// server directly rather than Dexie — §21 step 15). No sync_status/
+// sync_error here: that's local-only bookkeeping these rows never had.
 export function toPassengerRow(row: {
   id: string;
   crossing_id: string;
@@ -81,8 +90,8 @@ export function toPassengerRow(row: {
   classification_overridden: boolean;
   created_at: string;
   updated_at: string;
-}): Omit<LocalPassenger, "sync_status"> {
-  return row as Omit<LocalPassenger, "sync_status">;
+}): Omit<LocalPassenger, "sync_status" | "sync_error"> {
+  return row as Omit<LocalPassenger, "sync_status" | "sync_error">;
 }
 
 export interface LocalKnownPerson {
@@ -95,6 +104,7 @@ export interface LocalKnownPerson {
   last_used_at: string;
   created_at: string;
   sync_status: SyncStatus;
+  sync_error: string | null; // see LocalCrossing.sync_error
 }
 
 export interface LocalKnownCrew {
@@ -105,6 +115,22 @@ export interface LocalKnownCrew {
   last_used_at: string;
   created_at: string;
   sync_status: SyncStatus;
+  sync_error: string | null; // see LocalCrossing.sync_error
+}
+
+// Single-row (id fixed to "status") app-wide sync session state — separate
+// from any one table's sync_status/sync_error because it's not about a
+// particular row failing to push, it's about the auth session itself being
+// unusable. Written by runSync()'s ensureFreshSession() check, read by any
+// screen that wants to show "reconnect" messaging instead of a per-row
+// status that would otherwise misleadingly look like a data problem
+// (field report 2026-09-10 — a session left offline long enough that its
+// refresh token no longer works should read as "log back in", not as N
+// separate "Sync error"s across every pending row).
+export interface LocalSyncMeta {
+  id: "status";
+  needs_reauth: boolean;
+  updated_at: string;
 }
 
 // Cached copy of the shared manifest reference photo/PDF (one global row,

@@ -7,6 +7,7 @@ import type {
   LocalKnownCrew,
   LocalPendingDelete,
   LocalManifestTemplate,
+  LocalSyncMeta,
 } from "./schema";
 
 export class PaxFlowDB extends Dexie {
@@ -17,6 +18,7 @@ export class PaxFlowDB extends Dexie {
   known_crew!: EntityTable<LocalKnownCrew, "id">;
   pending_deletes!: EntityTable<LocalPendingDelete, "id">;
   manifest_template!: EntityTable<LocalManifestTemplate, "id">;
+  sync_meta!: EntityTable<LocalSyncMeta, "id">;
 
   constructor() {
     super("paxflow");
@@ -48,6 +50,21 @@ export class PaxFlowDB extends Dexie {
       known_crew: "id, owner_id, role",
       pending_deletes: "id, table_name",
       manifest_template: "id",
+    });
+    // v4: adds sync_meta (app-wide "needs reauth" flag, §16.7 sync
+    // reliability fix) — purely additive. sync_error is a new plain field
+    // on crossings/passengers/known_people/known_crew, not an index, so it
+    // needs no stores() entry of its own; existing rows simply read back
+    // with sync_error undefined until their next push/pull sets it.
+    this.version(4).stores({
+      vessels: "id, name",
+      crossings: "id, created_by, vessel_id, sync_status, expires_at",
+      passengers: "id, crossing_id, sync_status, &[crossing_id+seat_number]",
+      known_people: "id, owner_id, name",
+      known_crew: "id, owner_id, role",
+      pending_deletes: "id, table_name",
+      manifest_template: "id",
+      sync_meta: "id",
     });
   }
 }

@@ -88,6 +88,7 @@ export function NewCrossingForm({
       created_at: now,
       updated_at: now,
       sync_status: "pending",
+      sync_error: null,
     });
 
     router.push(`/crossings/${id}`);

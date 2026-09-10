@@ -57,6 +57,12 @@ export function CrossingDetail({
   const crossing = result?.crossing;
   const vesselLabel = crossing?.vessel_name_override || vessel?.name || "—";
 
+  // App-wide flag, not per-crossing (§16.7 sync reliability fix,
+  // 2026-09-10) — an expired session makes every pending row look like it
+  // has a data error, when really the whole session needs a fresh login.
+  const syncMeta = useLiveQuery(() => getDb().sync_meta.get("status"), []);
+  const needsReauth = syncMeta?.needs_reauth ?? false;
+
   const manifestExport = useManifestExport({
     crossingId,
     vesselName: vesselLabel,
@@ -136,13 +142,36 @@ export function CrossingDetail({
 
         <dt className="text-zinc-500 dark:text-zinc-400">Sync</dt>
         <dd className="text-zinc-900 dark:text-zinc-50">
-          {crossing.sync_status === "pending"
-            ? "Pending sync"
-            : crossing.sync_status === "synced"
-              ? "Synced"
-              : "Sync error"}
+          {needsReauth ? (
+            <span className="text-amber-700 dark:text-amber-400">
+              Reconnect to sync
+            </span>
+          ) : crossing.sync_status === "pending" ? (
+            "Pending sync"
+          ) : crossing.sync_status === "synced" ? (
+            "Synced"
+          ) : (
+            "Sync error"
+          )}
         </dd>
       </dl>
+
+      {needsReauth && (
+        <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+          Your session expired (likely from a long stretch offline) and
+          couldn&apos;t refresh automatically — nothing has synced since. Log
+          in again to resume.{" "}
+          <Link href="/login" className="font-medium underline">
+            Go to login
+          </Link>
+        </p>
+      )}
+
+      {!needsReauth && crossing.sync_status === "error" && crossing.sync_error && (
+        <p className="rounded-md bg-red-50 px-3 py-2 text-xs text-red-800 dark:bg-red-950 dark:text-red-300">
+          Sync error: {crossing.sync_error}
+        </p>
+      )}
 
       <ManifestQuickActions
         busy={manifestExport.busy}

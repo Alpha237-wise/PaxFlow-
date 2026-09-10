@@ -59,5 +59,6 @@ export async function rememberPerson(
     last_used_at: now,
     created_at: existing?.created_at ?? now,
     sync_status: "pending",
+    sync_error: null,
   });
 }

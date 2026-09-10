@@ -124,6 +124,7 @@ export function PassengerSheet({
       created_at: existing?.created_at ?? now,
       updated_at: now,
       sync_status: "pending",
+      sync_error: null,
     });
 
     await rememberPerson(userId, {

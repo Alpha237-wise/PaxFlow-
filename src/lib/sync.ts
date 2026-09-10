@@ -15,19 +15,82 @@
 // tables with a shared generic (the "id" primary-key inference varies per
 // row shape), and fighting that adds more risk than four short, obviously
 // correct functions.
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "./supabase/client";
 import { getDb } from "./db";
 import { toLocalVessel } from "./db/schema";
 import { pullManifestTemplate } from "./manifest-template";
 
-// sync_status is local-only bookkeeping — Supabase's schema has no such
-// column, so it must be stripped before upserting.
-function withoutSyncStatus<T extends { sync_status: unknown }>(
+// sync_status/sync_error are local-only bookkeeping — Supabase's schema
+// has neither column, so both must be stripped before upserting.
+function withoutSyncFields<T extends { sync_status: unknown; sync_error: unknown }>(
   row: T,
-): Omit<T, "sync_status"> {
-  const { sync_status, ...rest } = row;
+): Omit<T, "sync_status" | "sync_error"> {
+  const { sync_status, sync_error, ...rest } = row;
   void sync_status;
+  void sync_error;
   return rest;
+}
+
+// Postgrest errors carry more than .message (code/details/hint) — fold in
+// the code when present since it's the fastest way to recognize a known
+// failure at a glance (e.g. 42501 = RLS/permission denied) without having
+// to go re-read the full object.
+function formatSyncError(error: { message: string; code?: string }): string {
+  return error.code ? `${error.message} (${error.code})` : error.message;
+}
+
+// Checked once at the top of every runSync() before any push/pull is
+// attempted. Distinguishes three situations that look identical from a
+// single failed request but call for different responses:
+// - "ok": session is valid (or was refreshed just now) — proceed normally.
+// - "offline": couldn't even reach the server to check/refresh — not an
+//   auth problem, just no network right now; leave everything as-is for
+//   the next trigger, exactly like today's per-request network catches.
+// - "needs_reauth": the server was reached and explicitly rejected the
+//   refresh (or there's no session at all) — no amount of retrying will
+//   fix this without the user logging in again.
+// A session sitting on an expired access token after a long offline
+// stretch (this app's whole reason for existing — an AB at sea) used to
+// surface as an opaque per-row "Sync error" on every pending row, with no
+// way to tell that from a genuine data problem (field report 2026-09-10).
+// Explicitly refreshing here first — rather than trusting each push/pull's
+// own supabase-js client instance to notice and refresh on its own —
+// means every push/pull below reliably sees an already-fresh session
+// (a newly-constructed browser client reads the just-refreshed session
+// straight from the shared cookie storage @supabase/ssr uses, since that
+// storage, not any one client instance, is the actual source of truth).
+export async function ensureFreshSession(
+  supabase: SupabaseClient,
+): Promise<"ok" | "offline" | "needs_reauth"> {
+  let session;
+  try {
+    const { data } = await supabase.auth.getSession();
+    session = data.session;
+  } catch {
+    return "offline";
+  }
+  if (!session) return "needs_reauth";
+
+  const expiresAtMs = (session.expires_at ?? 0) * 1000;
+  const expiringSoon = expiresAtMs - Date.now() < 60_000;
+  if (!expiringSoon) return "ok";
+
+  try {
+    const { data, error } = await supabase.auth.refreshSession();
+    if (error || !data.session) return "needs_reauth";
+    return "ok";
+  } catch {
+    return "offline";
+  }
+}
+
+async function setNeedsReauth(value: boolean): Promise<void> {
+  await getDb().sync_meta.put({
+    id: "status",
+    needs_reauth: value,
+    updated_at: new Date().toISOString(),
+  });
 }
 
 async function pushCrossings(): Promise<void> {
@@ -35,10 +98,13 @@ async function pushCrossings(): Promise<void> {
   const supabase = createClient();
   const pending = await db.crossings.where("sync_status").equals("pending").toArray();
   for (const row of pending) {
-    const payload = withoutSyncStatus(row);
+    const payload = withoutSyncFields(row);
     try {
       const { error } = await supabase.from("crossings").upsert(payload);
-      await db.crossings.update(row.id, { sync_status: error ? "error" : "synced" });
+      await db.crossings.update(row.id, {
+        sync_status: error ? "error" : "synced",
+        sync_error: error ? formatSyncError(error) : null,
+      });
     } catch {
       // Network unreachable — leave "pending", the next trigger retries it.
     }
@@ -50,10 +116,13 @@ async function pushPassengers(): Promise<void> {
   const supabase = createClient();
   const pending = await db.passengers.where("sync_status").equals("pending").toArray();
   for (const row of pending) {
-    const payload = withoutSyncStatus(row);
+    const payload = withoutSyncFields(row);
     try {
       const { error } = await supabase.from("passengers").upsert(payload);
-      await db.passengers.update(row.id, { sync_status: error ? "error" : "synced" });
+      await db.passengers.update(row.id, {
+        sync_status: error ? "error" : "synced",
+        sync_error: error ? formatSyncError(error) : null,
+      });
     } catch {
       // Network unreachable.
     }
@@ -65,10 +134,13 @@ async function pushKnownPeople(): Promise<void> {
   const supabase = createClient();
   const pending = await db.known_people.where("sync_status").equals("pending").toArray();
   for (const row of pending) {
-    const payload = withoutSyncStatus(row);
+    const payload = withoutSyncFields(row);
     try {
       const { error } = await supabase.from("known_people").upsert(payload);
-      await db.known_people.update(row.id, { sync_status: error ? "error" : "synced" });
+      await db.known_people.update(row.id, {
+        sync_status: error ? "error" : "synced",
+        sync_error: error ? formatSyncError(error) : null,
+      });
     } catch {
       // Network unreachable.
     }
@@ -80,10 +152,13 @@ async function pushKnownCrew(): Promise<void> {
   const supabase = createClient();
   const pending = await db.known_crew.where("sync_status").equals("pending").toArray();
   for (const row of pending) {
-    const payload = withoutSyncStatus(row);
+    const payload = withoutSyncFields(row);
     try {
       const { error } = await supabase.from("known_crew").upsert(payload);
-      await db.known_crew.update(row.id, { sync_status: error ? "error" : "synced" });
+      await db.known_crew.update(row.id, {
+        sync_status: error ? "error" : "synced",
+        sync_error: error ? formatSyncError(error) : null,
+      });
     } catch {
       // Network unreachable.
     }
@@ -143,6 +218,7 @@ async function pullCrossings(userId: string): Promise<void> {
           ...r,
           status: r.status as "draft" | "finalized",
           sync_status: "synced",
+          sync_error: null,
         });
       }
     }
@@ -170,6 +246,7 @@ async function pullPassengers(crossingIds: string[]): Promise<void> {
           classification_computed: r.classification_computed as "TM" | "CC",
           classification_final: r.classification_final as "TM" | "CC",
           sync_status: "synced",
+          sync_error: null,
         });
       }
     }
@@ -212,7 +289,7 @@ async function pullKnownPeople(userId: string): Promise<void> {
       if (pendingDeleteIds.has(r.id)) continue;
       const local = await db.known_people.get(r.id);
       if (!local || new Date(r.last_used_at) > new Date(local.last_used_at)) {
-        await db.known_people.put({ ...r, sync_status: "synced" });
+        await db.known_people.put({ ...r, sync_status: "synced", sync_error: null });
       }
     }
   } catch {
@@ -244,6 +321,7 @@ async function pullKnownCrew(userId: string): Promise<void> {
           ...r,
           role: r.role as "captain" | "mechanic" | "ab" | "marine_hostess",
           sync_status: "synced",
+          sync_error: null,
         });
       }
     }
@@ -349,6 +427,17 @@ export async function resetAllMyData(userId: string): Promise<void> {
 }
 
 export async function runSync(userId: string): Promise<void> {
+  // Checked first, before any push/pull: an expired session left
+  // unrefreshed after a long offline stretch must not be allowed to
+  // masquerade as a per-row data error on every pending crossing (see
+  // ensureFreshSession's docstring). "offline" and "needs_reauth" both
+  // skip the rest of this cycle — pushing/pulling with a session already
+  // known to be bad would just produce a wall of misleading permission
+  // errors instead of one clear, correctly-labeled state.
+  const sessionState = await ensureFreshSession(createClient());
+  await setNeedsReauth(sessionState === "needs_reauth");
+  if (sessionState !== "ok") return;
+
   // Process queued deletes before any pull, so a delete that just went
   // through server-side isn't briefly re-pulled by the checks below (they
   // also guard against it independently, but this ordering avoids relying

@@ -2,14 +2,93 @@ import "fake-indexeddb/auto";
 process.env.NEXT_PUBLIC_SUPABASE_URL ??= "http://localhost:54321";
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??= "test-anon-key";
 import { beforeEach, describe, expect, it } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getDb, PaxFlowDB } from "./db";
 import type { LocalCrossing, LocalKnownCrew, LocalKnownPerson } from "./db/schema";
 import {
   clearMyHistory,
   deleteCrossing,
+  ensureFreshSession,
   purgeExpiredLocal,
   resetAllMyData,
 } from "./sync";
+
+// Duck-typed: ensureFreshSession only ever touches supabase.auth's two
+// session methods, so a full SupabaseClient isn't needed to exercise it.
+function fakeClient(auth: {
+  getSession: () => Promise<{ data: { session: { expires_at?: number } | null } }>;
+  refreshSession?: () => Promise<{ data: { session: unknown }; error: unknown }>;
+}): SupabaseClient {
+  return { auth } as unknown as SupabaseClient;
+}
+
+describe("ensureFreshSession (§16.7 sync reliability — expired session after a long offline stretch)", () => {
+  it("returns \"ok\" without refreshing when the session isn't close to expiring", async () => {
+    let refreshCalled = false;
+    const client = fakeClient({
+      getSession: async () => ({
+        data: { session: { expires_at: Date.now() / 1000 + 3600 } },
+      }),
+      refreshSession: async () => {
+        refreshCalled = true;
+        return { data: { session: {} }, error: null };
+      },
+    });
+    expect(await ensureFreshSession(client)).toBe("ok");
+    expect(refreshCalled).toBe(false);
+  });
+
+  it("refreshes and returns \"ok\" when the session is expiring soon and refresh succeeds", async () => {
+    const client = fakeClient({
+      getSession: async () => ({
+        data: { session: { expires_at: Date.now() / 1000 - 10 } }, // already past
+      }),
+      refreshSession: async () => ({ data: { session: { expires_at: 123 } }, error: null }),
+    });
+    expect(await ensureFreshSession(client)).toBe("ok");
+  });
+
+  it("returns \"needs_reauth\" when there is no session at all", async () => {
+    const client = fakeClient({
+      getSession: async () => ({ data: { session: null } }),
+    });
+    expect(await ensureFreshSession(client)).toBe("needs_reauth");
+  });
+
+  it("returns \"needs_reauth\" when the server explicitly rejects the refresh (expired/invalid refresh token)", async () => {
+    const client = fakeClient({
+      getSession: async () => ({
+        data: { session: { expires_at: Date.now() / 1000 - 10 } },
+      }),
+      refreshSession: async () => ({
+        data: { session: null },
+        error: { message: "Invalid Refresh Token", status: 400 },
+      }),
+    });
+    expect(await ensureFreshSession(client)).toBe("needs_reauth");
+  });
+
+  it("returns \"offline\" when getSession itself can't reach the network", async () => {
+    const client = fakeClient({
+      getSession: async () => {
+        throw new TypeError("Failed to fetch");
+      },
+    });
+    expect(await ensureFreshSession(client)).toBe("offline");
+  });
+
+  it("returns \"offline\" (not \"needs_reauth\") when refreshSession can't reach the network", async () => {
+    const client = fakeClient({
+      getSession: async () => ({
+        data: { session: { expires_at: Date.now() / 1000 - 10 } },
+      }),
+      refreshSession: async () => {
+        throw new TypeError("Failed to fetch");
+      },
+    });
+    expect(await ensureFreshSession(client)).toBe("offline");
+  });
+});
 
 function crossing(overrides: Partial<LocalCrossing>): LocalCrossing {
   const now = new Date().toISOString();
@@ -33,6 +112,7 @@ function crossing(overrides: Partial<LocalCrossing>): LocalCrossing {
     created_at: now,
     updated_at: now,
     sync_status: "synced" as const,
+    sync_error: null,
     ...overrides,
   };
 }
@@ -64,6 +144,7 @@ describe("purgeExpiredLocal (§15.1, mirrors the server-side pg_cron job locally
       created_at: expired.created_at,
       updated_at: expired.updated_at,
       sync_status: "synced",
+      sync_error: null,
     });
 
     await purgeExpiredLocal();
@@ -103,6 +184,7 @@ function passengerFor(crossingId: string, seat: number) {
     created_at: now,
     updated_at: now,
     sync_status: "synced" as const,
+    sync_error: null,
   };
 }
 
@@ -118,6 +200,7 @@ function knownPerson(overrides: Partial<LocalKnownPerson>): LocalKnownPerson {
     last_used_at: now,
     created_at: now,
     sync_status: "synced",
+    sync_error: null,
     ...overrides,
   };
 }
@@ -132,6 +215,7 @@ function knownCrewMember(overrides: Partial<LocalKnownCrew>): LocalKnownCrew {
     last_used_at: now,
     created_at: now,
     sync_status: "synced",
+    sync_error: null,
     ...overrides,
   };
 }

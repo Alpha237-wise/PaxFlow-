@@ -46,6 +46,7 @@ describe("PaxFlowDB (Dexie schema smoke test)", () => {
       created_at: now,
       updated_at: now,
       sync_status: "pending",
+      sync_error: null,
     });
 
     await db.passengers.put({
@@ -62,6 +63,7 @@ describe("PaxFlowDB (Dexie schema smoke test)", () => {
       created_at: now,
       updated_at: now,
       sync_status: "pending",
+      sync_error: null,
     });
 
     const passengers = await db.passengers
@@ -88,6 +90,7 @@ describe("PaxFlowDB (Dexie schema smoke test)", () => {
       created_at: now,
       updated_at: now,
       sync_status: "pending" as const,
+      sync_error: null,
     };
     await db.passengers.add({ ...base, id: "p1" });
     await expect(
@@ -108,6 +111,7 @@ describe("PaxFlowDB (Dexie schema smoke test)", () => {
       last_used_at: now,
       created_at: now,
       sync_status: "pending",
+      sync_error: null,
     });
     const owned = await db.known_people
       .where("owner_id")
