@@ -28,6 +28,28 @@
 // git history for the analysis scripts/crops used (reference/_v2-*.png,
 // gitignored scratch files, deleted after use). Re-measure the same way
 // if the template is ever replaced again.
+//
+// CORRECTED 2026-09-11 after a real end-to-end test (live app, real login,
+// real crossing, real seats, real "Download Image" click — not a static
+// render) showed every seat row's injected text sitting too low, visibly
+// straddling into the NEXT printed row (e.g. seat 1's name overlapping
+// seat 2's line). All six firstRowYPct/lastRowYPct pairs below were
+// re-measured directly against the actual printed row dividers in the
+// exported image (not re-derived from the source JPG a second time, to
+// avoid repeating whatever measurement mistake produced the original
+// values) and shifted up by ~2.5 points as a result. Verified by
+// re-rendering through the real app three times, each time measuring the
+// resulting text's ink-pixel center (not just eyeballing it) against the
+// same printed dividers — final residual is within 0.4% of true center
+// at every one of 6 sampled rows across both blocks (was up to 3.9% off,
+// and visibly in the wrong printed row, before this fix). Row 1 of each
+// block still sits close enough to the header's own two-line labels
+// ("Company ID Number", "Department/Company") to visually crowd them
+// despite being correctly centered in its own row — an inherent
+// tight-clearance property of this template's header height, not a
+// calibration error; data stays legible via the navy-vs-black color
+// contrast. Re-measure the same way (real render + ink-pixel
+// measurement, not just visual inspection) if the template changes.
 
 export interface FieldPosition {
   xPct: number;
@@ -94,9 +116,9 @@ export interface SeatBlockCalibration {
 // seats 26..N. No seat-number field: it's already printed on the reference
 // form and deliberately never redrawn (see manifest-view.tsx's seatRows).
 export const LEFT_SEAT_BLOCK: SeatBlockCalibration = {
-  name: { xPct: 9.84, firstRowYPct: 20.61, lastRowYPct: 94.53 },
-  companyId: { xPct: 28.05, firstRowYPct: 21.07, lastRowYPct: 93.95 },
-  department: { xPct: 33.75, firstRowYPct: 21.18, lastRowYPct: 93.84 },
+  name: { xPct: 9.84, firstRowYPct: 18.07, lastRowYPct: 91.99 },
+  companyId: { xPct: 28.05, firstRowYPct: 18.55, lastRowYPct: 91.43 },
+  department: { xPct: 33.75, firstRowYPct: 18.67, lastRowYPct: 91.33 },
 };
 
 // The right block's row divider showed negligible tilt across its width in
@@ -105,9 +127,9 @@ export const LEFT_SEAT_BLOCK: SeatBlockCalibration = {
 // so all three columns share one first/lastRowYPct pair here, unlike the
 // left block.
 export const RIGHT_SEAT_BLOCK: SeatBlockCalibration = {
-  name: { xPct: 48.28, firstRowYPct: 20.89, lastRowYPct: 94.24 },
-  companyId: { xPct: 63.59, firstRowYPct: 20.89, lastRowYPct: 94.24 },
-  department: { xPct: 69.38, firstRowYPct: 20.89, lastRowYPct: 94.24 },
+  name: { xPct: 48.28, firstRowYPct: 18.43, lastRowYPct: 91.78 },
+  companyId: { xPct: 63.59, firstRowYPct: 18.43, lastRowYPct: 91.78 },
+  department: { xPct: 69.38, firstRowYPct: 18.43, lastRowYPct: 91.78 },
 };
 
 export const LEFT_BLOCK_MAX_SEAT = 25;
