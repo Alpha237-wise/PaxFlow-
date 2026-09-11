@@ -1,11 +1,13 @@
-// One-off seed: uploads the clean CamScanner-corrected reference
-// (reference/manifest-blank-template-final.png, derived from
-// reference/manifest-blank-template.pdf.pdf) as the shared manifest
-// template, using the service role key since this is an admin-equivalent
-// action run from the CLI rather than through the Super Admin UI's
-// corner-drag flow (not needed here — the source PDF is already
-// perspective-corrected). Mirrors manifest-template.ts's uploadManifestTemplate,
-// minus the browser-only Dexie cache write.
+// One-off seed: uploads the current manifest reference
+// (reference/manifest-template-v2-final.png, a 2x upscale of
+// reference/manifest-blank-template-v2.jpg — replaces the earlier
+// PDF-derived reference, 2026-09-11) as the shared manifest template,
+// using the service role key since this is an admin-equivalent action run
+// from the CLI rather than through the Super Admin UI's corner-drag flow
+// (not needed here — the source scan is already straight). Mirrors
+// manifest-template.ts's uploadManifestTemplate, minus the browser-only
+// Dexie cache write — this IS the "Remplacer" flow's server-side effect
+// (§9.6), same well-known row id/storage path, just invoked from a script.
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
 
@@ -19,7 +21,7 @@ const BUCKET = "manifest-template";
 const ROW_ID = "11111111-1111-1111-1111-111111111111";
 const STORAGE_PATH = "current.png";
 
-const fileBytes = readFileSync("reference/manifest-template-final.png");
+const fileBytes = readFileSync("reference/manifest-template-v2-final.png");
 
 const { error: uploadError } = await admin.storage
   .from(BUCKET)
