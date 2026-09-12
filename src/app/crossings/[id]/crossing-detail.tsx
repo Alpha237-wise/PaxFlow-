@@ -261,7 +261,12 @@ export function CrossingDetail({
   }
 
   return (
-    <div className="w-full max-w-sm space-y-4">
+    // max-w-2xl from md: up — wide enough for the seat map's three blocks
+    // (~437px) to sit side by side without horizontal scroll on tablets;
+    // narrower sections below (crew form, summary, WhatsApp text) keep
+    // their own max-w-sm so they don't stretch into hard-to-read wide
+    // lines just because the page around them got wider.
+    <div className="w-full max-w-sm space-y-4 md:max-w-2xl">
       <Link
         href={
           crossing.vessel_id

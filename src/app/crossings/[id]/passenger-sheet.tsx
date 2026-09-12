@@ -146,7 +146,12 @@ export function PassengerSheet({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
-      <div className="w-full max-w-sm rounded-t-xl bg-white p-5 dark:bg-zinc-900 sm:rounded-xl">
+      {/* pb- adds env(safe-area-inset-bottom) on top of the normal p-5 so
+          the Save/Remove row doesn't sit flush against an iPhone's
+          home-indicator area when this renders as a bottom sheet (below
+          sm:, where it's pinned to the screen edge via items-end above);
+          0 on devices/browsers without a safe-area inset. */}
+      <div className="w-full max-w-sm rounded-t-xl bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] dark:bg-zinc-900 sm:rounded-xl">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
             Seat {seatNumber}

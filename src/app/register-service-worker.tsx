@@ -105,7 +105,10 @@ export function RegisterServiceWorker() {
   if (!updateAvailable) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 flex items-center justify-between gap-3 bg-zinc-900 px-4 py-3 text-sm text-white shadow-lg dark:bg-zinc-50 dark:text-zinc-900">
+    // pb- adds env(safe-area-inset-bottom) on top of the normal py-3 so
+    // this doesn't sit flush against an iPhone's home-indicator area (0 on
+    // devices/browsers without a safe-area inset, so no effect there).
+    <div className="fixed inset-x-0 bottom-0 z-50 flex items-center justify-between gap-3 bg-zinc-900 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] text-sm text-white shadow-lg dark:bg-zinc-50 dark:text-zinc-900">
       <span>New version available</span>
       <button
         type="button"

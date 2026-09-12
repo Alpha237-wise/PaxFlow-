@@ -29,7 +29,12 @@ export function SeatMap({
   const layout = SEAT_LAYOUTS[seatLayoutRef];
 
   return (
-    <div className="w-full max-w-sm">
+    // No max-width cap here (unlike the other sections on this page) — the
+    // three blocks need ~437px side by side, so this is left free to use
+    // whatever width the page wrapper gives it (capped at max-w-sm on
+    // phones, wider from md: up) rather than forcing horizontal scroll on
+    // tablets that have the room to show the whole seat map at once.
+    <div className="w-full">
       <h2 className="mb-3 text-sm font-medium text-zinc-600 dark:text-zinc-400">
         Seat map {passengers ? `(${passengers.length} occupied)` : ""}
       </h2>
