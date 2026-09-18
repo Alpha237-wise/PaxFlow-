@@ -1,0 +1,41 @@
+-- Fix a real sync-race bug (field report 2026-09-17): editing a crossing's
+-- header fields (Vessel/Date/Departure/Arrival/Origin/Destination) in place
+-- would sometimes silently revert moments later, requiring a trip through
+-- History -> reopen to make the same edit stick.
+--
+-- Root cause: crossings_set_updated_at / passengers_set_updated_at (added
+-- in the initial schema, 20260820150100/150200) unconditionally overwrite
+-- `updated_at` with the SERVER's own now() on every UPDATE, discarding
+-- whatever timestamp the client sent. But src/lib/sync.ts's pullCrossings/
+-- pullPassengers resolve multi-device conflicts by comparing `updated_at`
+-- client-side ("last-write-wins by updated_at, at the record level" —
+-- CLAUDE.md's documented, deliberate architecture) and TRUST that
+-- comparison to decide whether an incoming pulled row should overwrite the
+-- local one. With the trigger in place, a pushed row's server-side
+-- `updated_at` reflects "when the server happened to process this
+-- request", not "when the client actually made this edit" — so a push
+-- that raced ahead of (or lagged behind) a rapid follow-up local edit can
+-- end up with a LATER server timestamp than that edit's own local
+-- timestamp, purely from network/processing delay, not real recency. The
+-- very next pullCrossings() in the SAME sync cycle (src/lib/sync.ts's
+-- runSync() calls pushCrossings() then pullCrossings() back to back, and
+-- SyncEngine.tsx triggers a full runSync() the instant a crossing's page
+-- mounts) then sees that server row as "newer" and overwrites the local
+-- edit with the stale pre-edit data — exactly the observed bug. This is
+-- reliably worst right after creating a crossing and editing a header
+-- field within the first few seconds, which is exactly when the
+-- mount-triggered sync's push+pull is also in flight.
+--
+-- Fix: stop letting the server clobber a timestamp the client is already
+-- explicitly, correctly setting on every write (see updateCrossingField in
+-- crossing-detail.tsx, and the equivalent in new-crossing-form.tsx /
+-- passenger-sheet.tsx / crew-guests-form.tsx) — trust the client's own
+-- `updated_at`, since it alone reflects when the edit actually happened on
+-- the device that made it, not when a request happened to reach the
+-- server. Scoped to crossings/passengers only: these are the two tables
+-- using this client-authoritative last-write-wins scheme. profiles/
+-- vessels/manifest_template keep their own set_updated_at trigger
+-- unchanged — they're server/admin-managed, not part of this offline-first
+-- sync path, and don't have this failure mode.
+drop trigger if exists crossings_set_updated_at on public.crossings;
+drop trigger if exists passengers_set_updated_at on public.passengers;

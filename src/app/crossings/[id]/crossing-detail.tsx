@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getDb } from "@/lib/db";
 import type { LocalCrossing } from "@/lib/db/schema";
@@ -81,9 +81,19 @@ function EditableField({
           // some mobile browsers delay until well after the picker closes.
           if (type !== "text") commit(e.target.value);
         }}
-        onBlur={() => {
-          if (type === "text") commit(draft);
-        }}
+        // Always commits on blur, not just for type="text" — this is what
+        // resets `editing` back to false. A date/time field that's opened
+        // (tapped to peek at) but never actually changed never fires
+        // onChange, so without this it stays stuck "open" showing this
+        // field's own stale local `draft` state indefinitely — including
+        // across "Next Crossing", which re-renders this same component
+        // tree with a new crossing's data rather than remounting it (field
+        // report 2026-09-17: a Departure/Arrival field left open like this
+        // on one crossing carried its stale value onto the next one).
+        // Harmless no-op here when the value already matches (the picker's
+        // own onChange already committed it, or it was never changed) —
+        // commit()'s own `next !== value` check prevents a duplicate save.
+        onBlur={() => commit(draft)}
         onKeyDown={(e) => {
           if (e.key === "Enter") e.currentTarget.blur();
           if (e.key === "Escape") {
@@ -126,16 +136,30 @@ const EMPTY_MANIFEST_CROSSING = {
   total_guests: null,
 };
 
-export function CrossingDetail({
-  crossingId,
-  userId,
-  abDefaultName,
-}: {
-  crossingId: string;
-  userId: string;
-  abDefaultName: string | null;
-}) {
+export function CrossingDetail({ userId }: { userId: string }) {
   const router = useRouter();
+  // Read from the live URL client-side rather than trusting a crossingId
+  // prop baked into the server-rendered payload at render time. This
+  // matters specifically offline: a crossing created while offline has a
+  // brand-new id the service worker could never have precached (it didn't
+  // exist yet), so the SW's cache-fallback (see public/sw.js) serves
+  // whatever OTHER crossing-detail page it has cached instead of a 404 —
+  // structurally the same component tree, but with a stale crossingId
+  // baked into its server payload. useParams() reads the browser's actual
+  // current URL instead, so this component still resolves the RIGHT
+  // crossing from Dexie no matter which cached shell served the HTML
+  // (field report 2026-09-18: creating a crossing offline, then being
+  // unable to ever open it again until back online).
+  const params = useParams<{ id: string }>();
+  const crossingId = params.id;
+
+  // Read locally instead of the page.tsx Server Component querying this
+  // (same reasoning as Home's HomeHeader — see LocalProfile's docstring in
+  // schema.ts): this crossing-detail screen is squarely inside the
+  // critical offline-first chain (§16.7, §21 steps 5-12), so it shouldn't
+  // need a network round-trip just to know the signed-in AB's own name.
+  const profile = useLiveQuery(() => getDb().profiles.get(userId), [userId]);
+  const abDefaultName = profile?.full_name ?? null;
 
   // Dexie's .get() resolves to undefined both while a query is pending and
   // when the row genuinely doesn't exist — wrap it so those two states
@@ -229,6 +253,33 @@ export function CrossingDetail({
   // if the guess is wrong. To switch vessel instead, go back to Home, same
   // as before — this shortcut is deliberately single-purpose.
   async function handleNextCrossing() {
+    // Force-close any header field still open for editing (e.g. a time
+    // field peeked at but not changed) before anything else, so it commits
+    // (a no-op here, since nothing changed) and resets to its read-only
+    // display rather than carrying an open, stale input across to the next
+    // crossing (field report 2026-09-17) — the key={crossing.id} on each
+    // EditableField below only resets it once this component re-renders
+    // with the new crossing, which this blur doesn't need to wait for.
+    //
+    // Note for whoever investigates a "Next Crossing feels stuck" report
+    // next: it isn't stuck. This route has no generateStaticParams (per-
+    // user runtime data, nothing to prerender) and no loading.tsx did
+    // until this same fix — so every navigation here needs a real ~1-2s
+    // server round-trip (a fresh auth check in page.tsx) with literally
+    // nothing shown on screen in the meantime, which reads exactly like a
+    // hang. Confirmed by waiting it out in a real end-to-end test: the new
+    // crossing was already correctly created, and the page always
+    // eventually navigated to it — just not within the 1-2s an impatient
+    // check (or an impatient user) would allow for. loading.tsx alongside
+    // this file is the actual fix for that perception; don't go looking
+    // for a React-batching or router bug here again.
+    if (
+      document.activeElement instanceof HTMLElement &&
+      document.activeElement !== document.body
+    ) {
+      document.activeElement.blur();
+    }
+
     // Re-checked locally (already guaranteed true at the only call site,
     // the button below): TS doesn't carry the outer undefined-check's
     // narrowing into a nested function declaration's closure.
@@ -281,6 +332,17 @@ export function CrossingDetail({
       <div className="flex items-center justify-between gap-3">
         <h1 className="min-w-0 flex-1 text-lg font-semibold text-zinc-900 dark:text-zinc-50">
           <EditableField
+            // Keyed by crossing.id, same defense-in-depth as
+            // CrewGuestsForm below — "Next Crossing" re-renders this whole
+            // page with a new crossing's data rather than remounting it
+            // (same route pattern, no key on CrossingDetail itself in
+            // page.tsx), so without this any of these six fields left open
+            // mid-edit would carry its stale internal state onto the next
+            // crossing. The onBlur fix above independently closes that
+            // same gap for the common case (field opened then navigated
+            // away from without changing it); this key is the backstop for
+            // any other way `editing` could end up stuck true.
+            key={crossing.id}
             value={crossing.vessel_name_override ?? vessel?.name ?? ""}
             placeholder="BIRD name"
             onSave={(v) => {
@@ -304,6 +366,7 @@ export function CrossingDetail({
         <dt className="text-zinc-500 dark:text-zinc-400">Date</dt>
         <dd className="text-zinc-900 dark:text-zinc-50">
           <EditableField
+            key={crossing.id}
             value={crossing.crossing_date}
             placeholder="—"
             type="date"
@@ -315,6 +378,7 @@ export function CrossingDetail({
         <dt className="text-zinc-500 dark:text-zinc-400">Departure</dt>
         <dd className="text-zinc-900 dark:text-zinc-50">
           <EditableField
+            key={crossing.id}
             value={crossing.time_of_departure ?? ""}
             placeholder="—"
             type="time"
@@ -325,6 +389,7 @@ export function CrossingDetail({
         <dt className="text-zinc-500 dark:text-zinc-400">Arrival</dt>
         <dd className="text-zinc-900 dark:text-zinc-50">
           <EditableField
+            key={crossing.id}
             value={crossing.time_of_arrival ?? ""}
             placeholder="—"
             type="time"
@@ -335,6 +400,7 @@ export function CrossingDetail({
         <dt className="text-zinc-500 dark:text-zinc-400">Origin</dt>
         <dd className="text-zinc-900 dark:text-zinc-50">
           <EditableField
+            key={crossing.id}
             value={crossing.port_of_origin ?? ""}
             placeholder="—"
             onSave={(v) => updateCrossingField({ port_of_origin: v || null })}
@@ -344,6 +410,7 @@ export function CrossingDetail({
         <dt className="text-zinc-500 dark:text-zinc-400">Destination</dt>
         <dd className="text-zinc-900 dark:text-zinc-50">
           <EditableField
+            key={crossing.id}
             value={crossing.destination ?? ""}
             placeholder="—"
             onSave={(v) => updateCrossingField({ destination: v || null })}

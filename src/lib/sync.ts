@@ -18,7 +18,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "./supabase/client";
 import { getDb } from "./db";
-import { toLocalVessel } from "./db/schema";
+import { toLocalVessel, toLocalProfile } from "./db/schema";
 import { pullManifestTemplate } from "./manifest-template";
 
 // sync_status/sync_error are local-only bookkeeping — Supabase's schema
@@ -183,6 +183,26 @@ async function pullVessels(): Promise<void> {
       .select("id, name, total_seats, status, seat_layout_ref");
     if (error || !data) return;
     await db.vessels.bulkPut(data.map(toLocalVessel));
+  } catch {
+    // Network unreachable.
+  }
+}
+
+// Same pattern/reasoning as pullVessels — Home's page.tsx used to fetch
+// this server-side on every load instead of relying on this cache (see
+// LocalProfile's docstring in schema.ts). Read-only: nothing writes to
+// profiles from the client, so no push counterpart is needed.
+async function pullProfile(userId: string): Promise<void> {
+  const db = getDb();
+  const supabase = createClient();
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, full_name, role")
+      .eq("id", userId)
+      .single();
+    if (error || !data) return;
+    await db.profiles.put(toLocalProfile(data));
   } catch {
     // Network unreachable.
   }
@@ -426,6 +446,21 @@ export async function resetAllMyData(userId: string): Promise<void> {
   void processPendingDeletes();
 }
 
+// One step's exception must never take down the rest of the cycle — a bug
+// isolated to, say, known_people (see the sync_status index fix in
+// db/index.ts's v5, and its docstring for exactly how bad the alternative
+// is) used to silently abort every step after it in the chain below,
+// forever, on every single sync trigger. Logged rather than swallowed
+// outright so a real regression is still visible in the console instead of
+// going fully silent again.
+async function runStep(name: string, step: () => Promise<void>): Promise<void> {
+  try {
+    await step();
+  } catch (error) {
+    console.error(`[sync] ${name} failed, continuing with the rest of this cycle:`, error);
+  }
+}
+
 export async function runSync(userId: string): Promise<void> {
   // Checked first, before any push/pull: an expired session left
   // unrefreshed after a long offline stretch must not be allowed to
@@ -442,37 +477,41 @@ export async function runSync(userId: string): Promise<void> {
   // through server-side isn't briefly re-pulled by the checks below (they
   // also guard against it independently, but this ordering avoids relying
   // on that alone).
-  await processPendingDeletes();
+  await runStep("processPendingDeletes", processPendingDeletes);
 
   // Vessels first and on its own: the BIRD chooser is the first screen of
   // the whole workflow, so this cache matters more than anything else
   // here being fully up to date yet.
-  await pullVessels();
+  await runStep("pullVessels", pullVessels);
+
+  // Same reasoning as vessels: Home's greeting/nav needs this on the very
+  // first render, not after the push/pull cycle below.
+  await runStep("pullProfile", () => pullProfile(userId));
 
   // Same reasoning as vessels: the manifest template is reference data
   // every crossing needs to export, so cache it early rather than after
   // the push/pull cycle below.
-  await pullManifestTemplate();
+  await runStep("pullManifestTemplate", pullManifestTemplate);
 
   // Crossings before passengers: passengers.crossing_id is a foreign key,
   // the parent row must exist server-side first.
-  await pushCrossings();
-  await pushPassengers();
-  await pushKnownPeople();
-  await pushKnownCrew();
+  await runStep("pushCrossings", pushCrossings);
+  await runStep("pushPassengers", pushPassengers);
+  await runStep("pushKnownPeople", pushKnownPeople);
+  await runStep("pushKnownCrew", pushKnownCrew);
 
   // Pull remote crossings/passengers for "historique personnel (local +
   // distant fusionnés)" — §21 step 14. Re-read local crossing ids after
   // pulling so passengers are fetched for the full merged set, not just
   // whatever was newly pulled this round.
-  await pullCrossings(userId);
+  await runStep("pullCrossings", () => pullCrossings(userId));
   const myCrossingIds = (
     await getDb().crossings.where("created_by").equals(userId).toArray()
   ).map((c) => c.id);
-  await pullPassengers(myCrossingIds);
+  await runStep("pullPassengers", () => pullPassengers(myCrossingIds));
 
-  await pullKnownPeople(userId);
-  await pullKnownCrew(userId);
+  await runStep("pullKnownPeople", () => pullKnownPeople(userId));
+  await runStep("pullKnownCrew", () => pullKnownCrew(userId));
 
-  await purgeExpiredLocal();
+  await runStep("purgeExpiredLocal", purgeExpiredLocal);
 }

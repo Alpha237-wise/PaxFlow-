@@ -8,6 +8,7 @@ import type {
   LocalPendingDelete,
   LocalManifestTemplate,
   LocalSyncMeta,
+  LocalProfile,
 } from "./schema";
 
 export class PaxFlowDB extends Dexie {
@@ -19,6 +20,7 @@ export class PaxFlowDB extends Dexie {
   pending_deletes!: EntityTable<LocalPendingDelete, "id">;
   manifest_template!: EntityTable<LocalManifestTemplate, "id">;
   sync_meta!: EntityTable<LocalSyncMeta, "id">;
+  profiles!: EntityTable<LocalProfile, "id">;
 
   constructor() {
     super("paxflow");
@@ -65,6 +67,50 @@ export class PaxFlowDB extends Dexie {
       pending_deletes: "id, table_name",
       manifest_template: "id",
       sync_meta: "id",
+    });
+    // v5: indexes sync_status on known_people/known_crew — missed when
+    // sync_status was added to those two tables, even though
+    // pushKnownPeople()/pushKnownCrew() in sync.ts have queried
+    // `.where("sync_status").equals("pending")` since this feature was
+    // first built. Every call threw "KeyPath sync_status on object store
+    // known_people is not indexed" (a Dexie SchemaError), which — since
+    // nothing in runSync() catches it — aborted that entire sync cycle at
+    // that exact point: pushKnownCrew() and every pull (pullCrossings,
+    // pullPassengers, pullKnownPeople, pullKnownCrew) and
+    // purgeExpiredLocal() after it in the same runSync() call never ran,
+    // silently, on every single sync trigger since 2026-08-20. Found while
+    // investigating a field report (2026-09-17) of in-place header edits
+    // reverting shortly after being made; this and the crossings/
+    // passengers set_updated_at trigger fix (see the 2026-09-17 migration)
+    // are two independent bugs that were likely compounding — a pull that
+    // never ran couldn't overwrite a local edit, but the two together
+    // produced inconsistent, timing-dependent symptoms during testing.
+    this.version(5).stores({
+      vessels: "id, name",
+      crossings: "id, created_by, vessel_id, sync_status, expires_at",
+      passengers: "id, crossing_id, sync_status, &[crossing_id+seat_number]",
+      known_people: "id, owner_id, name, sync_status",
+      known_crew: "id, owner_id, role, sync_status",
+      pending_deletes: "id, table_name",
+      manifest_template: "id",
+      sync_meta: "id",
+    });
+    // v6: adds profiles — caches the signed-in user's own name/role
+    // locally so Home's greeting and role-gated nav links (Supervision/
+    // Admin) no longer need the server-side profiles query that used to
+    // run on every single Home load (2026-09-18, alongside removing that
+    // query and Home's redundant vessels query from page.tsx — see
+    // LocalProfile's docstring in schema.ts). Purely additive.
+    this.version(6).stores({
+      vessels: "id, name",
+      crossings: "id, created_by, vessel_id, sync_status, expires_at",
+      passengers: "id, crossing_id, sync_status, &[crossing_id+seat_number]",
+      known_people: "id, owner_id, name, sync_status",
+      known_crew: "id, owner_id, role, sync_status",
+      pending_deletes: "id, table_name",
+      manifest_template: "id",
+      sync_meta: "id",
+      profiles: "id",
     });
   }
 }

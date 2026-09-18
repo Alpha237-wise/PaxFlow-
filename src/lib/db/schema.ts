@@ -13,6 +13,32 @@ export interface LocalVessel {
   seat_layout_ref: "51-seats" | "50-seats";
 }
 
+// Cached copy of the signed-in user's OWN profile row — same purpose as
+// LocalVessel: Home's greeting/role-gated nav links used to depend on a
+// server-side profiles query on every single page load (2026-09-18 field
+// report: this, plus the equally redundant server-side vessels query, was
+// adding a real, measured ~600ms of network-blocking delay to Home, and
+// made it fail outright when actually offline — see the same date's
+// migration to getSession() for the auth check itself). Read-only from the
+// client: nothing in this app currently lets a user edit their own
+// full_name/role through the UI, so this only ever needs pulling, never
+// pushing.
+export interface LocalProfile {
+  id: string;
+  full_name: string | null;
+  role: "user" | "admin" | "super_admin";
+}
+
+// Same narrowing need as toLocalVessel — Supabase's generated type for
+// `role` widens the CHECK-constrained column to plain `string`.
+export function toLocalProfile(row: {
+  id: string;
+  full_name: string | null;
+  role: string;
+}): LocalProfile {
+  return row as LocalProfile;
+}
+
 // Supabase's generated types widen CHECK-constrained text columns to plain
 // `string` (only real Postgres enums produce literal unions) — narrow at
 // the boundary instead of loosening LocalVessel's type everywhere it's used.
