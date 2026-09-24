@@ -4,7 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getDb } from "@/lib/db";
 import type { LocalKnownPerson } from "@/lib/db/schema";
-import { rememberPerson, searchKnownPeople } from "@/lib/known-people";
+import {
+  rememberPerson,
+  searchKnownPeople,
+  searchKnownPeopleByCompanyId,
+} from "@/lib/known-people";
 import {
   resolveClassification,
   type Classification,
@@ -75,6 +79,24 @@ export function PassengerSheet({
     };
   }, [userId, name]);
 
+  const [idSuggestions, setIdSuggestions] = useState<LocalKnownPerson[]>([]);
+  const [showIdSuggestions, setShowIdSuggestions] = useState(false);
+
+  // Reverse lookup, matricule -> name/department: two TMs never share a
+  // Company ID Number (§4.1), so an AB who types the matricule first
+  // (before the name) gets the same recall the name search already gives,
+  // just in the other direction. TM-only by construction — CC has no
+  // matricule to search by.
+  useEffect(() => {
+    let active = true;
+    searchKnownPeopleByCompanyId(userId, companyIdNumber).then((results) => {
+      if (active) setIdSuggestions(results);
+    });
+    return () => {
+      active = false;
+    };
+  }, [userId, companyIdNumber]);
+
   function selectSuggestion(person: LocalKnownPerson) {
     setForm({
       name: person.name,
@@ -83,6 +105,7 @@ export function PassengerSheet({
       companyName: person.company_name ?? "",
     });
     setShowSuggestions(false);
+    setShowIdSuggestions(false);
   }
 
   function setName(value: string) {
@@ -197,8 +220,12 @@ export function PassengerSheet({
                       <span className="font-medium text-zinc-900 dark:text-zinc-50">
                         {person.name}
                       </span>
+                      {/* Matricule shown alongside department/company so
+                          homonyms (same name, different matricule, §4.1)
+                          can actually be told apart — never auto-select
+                          the first match when several share a name. */}
                       <span className="ml-2 text-xs text-zinc-500 dark:text-zinc-400">
-                        {[person.department, person.company_name]
+                        {[person.company_id_number, person.department, person.company_name]
                           .filter(Boolean)
                           .join(" / ") || "—"}
                       </span>
@@ -209,7 +236,7 @@ export function PassengerSheet({
             )}
           </div>
 
-          <div>
+          <div className="relative">
             <label
               htmlFor="companyIdNumber"
               className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
@@ -221,16 +248,42 @@ export function PassengerSheet({
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"
+              autoComplete="off"
               value={companyIdNumber}
-              onChange={(e) =>
+              onChange={(e) => {
                 // Digits only — prevents accidentally typing the
                 // department here instead (§4.1's classification rule
                 // depends on this field only ever holding a matricule).
-                setCompanyIdNumber(e.target.value.replace(/\D/g, ""))
-              }
+                setCompanyIdNumber(e.target.value.replace(/\D/g, ""));
+                setShowIdSuggestions(true);
+              }}
+              onFocus={() => setShowIdSuggestions(true)}
+              onBlur={() => setShowIdSuggestions(false)}
               placeholder="blank for Director/Manager/new joiner"
               className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-base dark:border-zinc-700 dark:bg-zinc-800"
             />
+            {showIdSuggestions && idSuggestions.length > 0 && (
+              <ul className="absolute z-10 mt-1 w-full rounded-md border border-zinc-300 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-800">
+                {idSuggestions.map((person) => (
+                  <li key={person.id}>
+                    <button
+                      type="button"
+                      onMouseDown={() => selectSuggestion(person)}
+                      className="block w-full px-3 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                    >
+                      <span className="font-medium text-zinc-900 dark:text-zinc-50">
+                        {person.name}
+                      </span>
+                      <span className="ml-2 text-xs text-zinc-500 dark:text-zinc-400">
+                        {[person.company_id_number, person.department]
+                          .filter(Boolean)
+                          .join(" / ") || "—"}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
