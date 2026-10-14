@@ -6,7 +6,7 @@
 **Statut :** Validé par le porteur de projet le 2026-08-20. Développement en cours, ordre du §21.
 
 ### Décisions prises lors de la validation (2026-08-20)
-- **§8.1 — Format WhatsApp** : deux messages séparés (pas un seul texte à deux blocs). Chaque bloc a son propre bouton Copier/Partager.
+- **§8.1 — Format WhatsApp** : ~~deux messages séparés~~ → **un seul message** depuis le 2026-10-14 (en-tête, ligne vide, groupe TM, ligne vide, groupe CC), avec un seul bouton Copier/Partager.
 - **§12 — Schéma `vessels`** : la colonne `operational_seats` est retirée des migrations (résidu d'une règle de capacité abandonnée en v1.1 — voir §4.4, aucune distinction de capacité opérationnelle n'est appliquée).
 - **§5 — Plan de sièges** : le visuel de référence sera déposé par le porteur de projet dans `docs/reference/`. À utiliser à l'étape 7 du §21 pour construire le composant Seat Map.
 
@@ -221,9 +221,9 @@ Champs texte libre avec autocomplete (mémoire intelligente, §4.5) :
 
 ### 8.1 Format précis — **résolu (v1.1), basé sur exemple réel fourni**
 
-Le porteur de projet a fourni une capture d'écran de son usage réel actuel (copié-collé manuellement dans le groupe WhatsApp « Marine Operations »). PaxFlow doit reproduire fidèlement cette structure, en **deux messages séparés** (décision validée le 2026-08-20 — chaque bloc a son propre bouton Copier/Partager, plutôt qu'un seul texte à deux blocs).
+Le porteur de projet a fourni une capture d'écran de son usage réel actuel (copié-collé manuellement dans le groupe WhatsApp « Marine Operations »). PaxFlow doit reproduire fidèlement cette structure, en **un seul message** depuis le 2026-10-14 (décision du porteur de projet — remplace les deux messages séparés validés le 2026-08-20) : l'en-tête ci-dessous, une ligne vide, le groupe TM, une ligne vide, le groupe CC. Un groupe vide est omis avec sa ligne vide. La ligne « nom abrégé du vessel » (`B1`) de l'ancien Message 2 est supprimée : le nom figure déjà en première ligne de l'en-tête.
 
-**Message 1 — Résumé + photo du manifeste :**
+**Partie 1 — En-tête (+ photo du manifeste) :**
 
 **Format révisé (2026-08-20) par le porteur de projet** — remplace le format précédemment aligné sur l'exemple photo de référence :
 ```
@@ -237,13 +237,13 @@ Mh <nom Marine Hostess>
 Capt <nom Captain on board> team
 ```
 - Ligne `Mh <nom>` : **conditionnelle, pour tous les bateaux** (décision 2026-10-14) — elle n'apparaît que si le champ Marine Hostess est rempli pour la traversée. Si vide, la ligne est absente (ni ligne vide, ni placeholder).
-- Ligne 1 : nom du vessel **sans espace** (ex. "BIRD1", différent de l'abréviation "B1" du Message 2).
+- Ligne 1 : nom du vessel **sans espace** (ex. "BIRD1", l'abréviation "B1" de l'ancien Message 2 n'est plus utilisée).
 - Ligne 6 : le nombre de guests est **toujours affiché**, y compris s'il vaut 0 — jamais omis.
 - `<Total CC>CC` : collé, en majuscules (différent de l'ancien format "12 cc" observé sur l'exemple réel — changement explicite du porteur de projet, pas une erreur).
 
 suivi du **manifeste généré (image ou PDF)** en pièce jointe.
 
-**Message 2 — Répartition par département :**
+**Partie 2 — Répartition par département (suite du même message) :**
 
 **Format corrigé (2026-10-14) par le porteur de projet** — remplace le format « effectif collé au libellé » (`7fnb`) confirmé le 2026-08-20 par `docs/reference/whatsapp-summary-example.jpg`. Pour les deux groupes (TM et CC) : effectif, puis un tiret suivi d'une espace, puis le libellé — `<effectif>- <libellé>`. Le libellé est affiché exactement tel que saisi/combiné (ex. `Eng/Qsp`), sans reformatage :
 

@@ -95,7 +95,7 @@ export function WhatsAppSummaryView({
     [crossingId],
   );
 
-  const { message1, message2 } = buildWhatsAppSummary({
+  const { message } = buildWhatsAppSummary({
     portOfOrigin,
     destination,
     timeOfDeparture,
@@ -111,10 +111,9 @@ export function WhatsAppSummaryView({
       <h2 className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
         WhatsApp summary
       </h2>
-      <MessageBlock label="Message 1" text={message1} canShare={canShare} />
-      <MessageBlock label="Message 2" text={message2} canShare={canShare} />
+      <MessageBlock label="Message" text={message} canShare={canShare} />
       <p className="text-xs text-zinc-500 dark:text-zinc-400">
-        To attach the manifest to Message 1: download it below (Image or
+        To attach the manifest to this message: download it below (Image or
         PDF), then add it in WhatsApp right after sharing this text (§8.2 —
         manual attachment, sharing text alone doesn&apos;t always support
         attaching a file automatically).

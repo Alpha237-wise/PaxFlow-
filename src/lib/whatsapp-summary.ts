@@ -1,10 +1,12 @@
-// Résumé WhatsApp — docs/cahier-des-charges.md §8.1. Two separate messages
-// (decision validated 2026-08-20).
+// Résumé WhatsApp — docs/cahier-des-charges.md §8.1. ONE message since
+// 2026-10-14 (was two separate messages, decision of 2026-08-20): the
+// header block, then the TM-by-department group, then the CC group, each
+// separated by a blank line.
 //
-// Message 1's exact line order/format was revised by the project owner on
+// The header's exact line order/format was revised by the project owner on
 // 2026-08-20, overriding the format originally matched against the real
 // reference screenshot (docs/reference/whatsapp-summary-example.jpg —
-// that photo still governs Message 2, unchanged).
+// that photo still governs the department groups' content).
 import { summarizeCrossing, type PassengerForSummary } from "./crossing-summary";
 
 export interface WhatsAppSummaryInput {
@@ -19,18 +21,18 @@ export interface WhatsAppSummaryInput {
 }
 
 export interface WhatsAppSummary {
-  message1: string;
-  message2: string;
+  message: string;
 }
 
 // "BIRD 1" -> "B1" (§6 note); anything else (a custom vessel_name_override)
-// passes through unchanged. Used by Message 2's header.
+// passes through unchanged. No longer used by the summary itself (the
+// merged message's header already carries the compact vessel name).
 export function abbreviateVesselName(name: string): string {
   const match = /^BIRD\s+(\d+)$/i.exec(name.trim());
   return match ? `B${match[1]}` : name;
 }
 
-// "BIRD 1" -> "BIRD1" (Message 1's own vessel format — no abbreviation,
+// "BIRD 1" -> "BIRD1" (the header's own vessel format — no abbreviation,
 // just the space removed). Distinct from abbreviateVesselName above.
 function vesselNameCompact(name: string): string {
   return name.replace(/\s+/g, "");
@@ -49,7 +51,7 @@ export function buildWhatsAppSummary(input: WhatsAppSummaryInput): WhatsAppSumma
   // this crossing — no empty line or placeholder otherwise (any vessel).
   const marineHostess = input.marineHostess?.trim();
 
-  const message1 = [
+  const header = [
     vesselNameCompact(input.vesselName),
     `Dep@:${formatDepartureTime(input.timeOfDeparture)}`,
     `${input.portOfOrigin ?? ""} to ${input.destination ?? ""}`,
@@ -66,12 +68,11 @@ export function buildWhatsAppSummary(input: WhatsAppSummaryInput): WhatsAppSumma
   const tmLines = summary.tmByDepartment.map((g) => `${g.count}- ${g.label}`);
   const ccLines = summary.ccByGroup.map((g) => `${g.count}- ${g.label}`);
 
-  const message2 = [
-    abbreviateVesselName(input.vesselName),
-    ...tmLines,
-    "",
-    ...ccLines,
-  ].join("\n");
+  // A group with no passengers is skipped along with its blank line, so an
+  // empty crossing doesn't end in stray blank lines.
+  const sections = [header];
+  if (tmLines.length > 0) sections.push(tmLines.join("\n"));
+  if (ccLines.length > 0) sections.push(ccLines.join("\n"));
 
-  return { message1, message2 };
+  return { message: sections.join("\n\n") };
 }
