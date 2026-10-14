@@ -16,6 +16,9 @@ export interface WhatsAppSummaryInput {
   marineHostess: string | null;
   captainOnBoard: string | null;
   totalGuests: number | null;
+  // false for boats that carry no guests (BIRD 9/10): the "<n>guests" line
+  // is left out entirely. Defaults to true (line always shown, even at 0).
+  includeGuestsLine?: boolean;
   vesselName: string;
   passengers: PassengerForSummary[];
 }
@@ -57,7 +60,7 @@ export function buildWhatsAppSummary(input: WhatsAppSummaryInput): WhatsAppSumma
     `${input.portOfOrigin ?? ""} to ${input.destination ?? ""}`,
     `${summary.totalTM}TM`,
     `${summary.totalCC}CC`,
-    `${input.totalGuests ?? 0}guests`,
+    ...(input.includeGuestsLine === false ? [] : [`${input.totalGuests ?? 0}guests`]),
     ...(marineHostess ? [`Mh ${marineHostess}`] : []),
     `Capt ${input.captainOnBoard ?? ""} team`,
   ].join("\n");

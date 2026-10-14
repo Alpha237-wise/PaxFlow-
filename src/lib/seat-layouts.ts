@@ -45,6 +45,15 @@ const FIFTY_SEATS: SeatLayout = {
 // this same key — see manifest-template.ts and manifest-template-calibration.ts.
 export type SeatLayoutRef = "51-seats" | "50-seats";
 
+// Whether this boat type carries guests at all (operational fact confirmed
+// 2026-10-14: no guests on BIRD 9/10). When false, the "Total No. of Guest"
+// input, the manifest's guest field and the WhatsApp "<n>guests" line are
+// all absent — not just emptied.
+export const LAYOUT_CARRIES_GUESTS: Record<SeatLayoutRef, boolean> = {
+  "51-seats": true,
+  "50-seats": false,
+};
+
 export const SEAT_LAYOUTS: Record<SeatLayoutRef, SeatLayout> = {
   "51-seats": FIFTY_ONE_SEATS,
   "50-seats": FIFTY_SEATS,

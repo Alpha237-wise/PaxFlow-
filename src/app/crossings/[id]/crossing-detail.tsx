@@ -7,6 +7,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { getDb } from "@/lib/db";
 import type { LocalCrossing } from "@/lib/db/schema";
 import { todayLocalISODate } from "@/lib/date";
+import { LAYOUT_CARRIES_GUESTS } from "@/lib/seat-layouts";
 import { SeatMap } from "./seat-map";
 import { CrewGuestsForm } from "./crew-guests-form";
 import { SummaryView } from "./summary-view";
@@ -178,6 +179,8 @@ export function CrossingDetail({ userId }: { userId: string }) {
   );
 
   const crossing = result?.crossing;
+  // Unknown vessel (still loading) keeps the guest field, as before.
+  const showGuests = vessel ? LAYOUT_CARRIES_GUESTS[vessel.seat_layout_ref] : true;
   const vesselLabel = crossing?.vessel_name_override || vessel?.name || "—";
 
   // App-wide flag, not per-crossing (§16.7 sync reliability fix,
@@ -475,6 +478,7 @@ export function CrossingDetail({ userId }: { userId: string }) {
         initialAbName={crossing.ab_name}
         initialMarineHostess={crossing.marine_hostess}
         initialTotalGuests={crossing.total_guests}
+        showGuests={showGuests}
       />
 
       <SummaryView crossingId={crossing.id} />
@@ -490,6 +494,7 @@ export function CrossingDetail({ userId }: { userId: string }) {
         marineHostess={crossing.marine_hostess}
         captainOnBoard={crossing.captain_on_board}
         totalGuests={crossing.total_guests}
+        showGuests={showGuests}
       />
 
       {crossing.vessel_id && (

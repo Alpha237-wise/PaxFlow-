@@ -5,6 +5,7 @@ import {
   type SeatBlockCalibration,
 } from "./manifest-template-calibration";
 import { MANIFEST_TEMPLATES, SEAT_LAYOUT_REFS } from "./manifest-template";
+import { LAYOUT_CARRIES_GUESTS } from "./seat-layouts";
 
 describe("manifest templates per seat layout", () => {
   it("gives every layout its own Supabase row, storage path and local cache key", () => {
@@ -20,6 +21,12 @@ describe("manifest templates per seat layout", () => {
       storagePath: "current.png",
       localId: "current",
     });
+  });
+
+  it("draws a guest field on the manifest exactly when the boat type carries guests", () => {
+    for (const ref of SEAT_LAYOUT_REFS) {
+      expect(!!MANIFEST_CALIBRATIONS[ref].footer.totalGuests).toBe(LAYOUT_CARRIES_GUESTS[ref]);
+    }
   });
 
   it("has a calibration for every layout", () => {

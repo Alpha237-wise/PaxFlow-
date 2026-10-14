@@ -89,6 +89,7 @@ export function CrewGuestsForm({
   initialAbName,
   initialMarineHostess,
   initialTotalGuests,
+  showGuests,
 }: {
   crossingId: string;
   userId: string;
@@ -98,6 +99,9 @@ export function CrewGuestsForm({
   initialAbName: string | null;
   initialMarineHostess: string | null;
   initialTotalGuests: number | null;
+  // false for boats that carry no guests (BIRD 9/10): the field is hidden
+  // and total_guests is left untouched on save.
+  showGuests: boolean;
 }) {
   const [captainOnBoard, setCaptainOnBoard] = useState(
     initialCaptainOnBoard ?? "",
@@ -124,7 +128,7 @@ export function CrewGuestsForm({
       mechanic: mechanic.trim() || null,
       ab_name: abName.trim() || null,
       marine_hostess: marineHostess.trim() || null,
-      total_guests: totalGuests.trim() ? Number(totalGuests) : null,
+      ...(showGuests ? { total_guests: totalGuests.trim() ? Number(totalGuests) : null } : null),
       updated_at: new Date().toISOString(),
       sync_status: "pending",
     });
@@ -193,6 +197,7 @@ export function CrewGuestsForm({
         }}
       />
 
+      {showGuests && (
       <div>
         <label
           htmlFor="totalGuests"
@@ -216,6 +221,7 @@ export function CrewGuestsForm({
           Informational only — never counted in the TM/CC totals (§4.2).
         </p>
       </div>
+      )}
 
       <div className="flex items-center gap-3 pt-1">
         <button

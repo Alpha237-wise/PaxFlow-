@@ -69,6 +69,7 @@ export function WhatsAppSummaryView({
   marineHostess,
   captainOnBoard,
   totalGuests,
+  showGuests,
 }: {
   crossingId: string;
   vesselName: string;
@@ -78,6 +79,7 @@ export function WhatsAppSummaryView({
   marineHostess: string | null;
   captainOnBoard: string | null;
   totalGuests: number | null;
+  showGuests: boolean;
 }) {
   const [canShare, setCanShare] = useState(false);
   useEffect(() => {
@@ -102,6 +104,7 @@ export function WhatsAppSummaryView({
     marineHostess,
     captainOnBoard,
     totalGuests,
+    includeGuestsLine: showGuests,
     vesselName,
     passengers: passengers ?? [],
   });

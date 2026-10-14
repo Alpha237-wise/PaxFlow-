@@ -238,7 +238,7 @@ Capt <nom Captain on board> team
 ```
 - Ligne `Mh <nom>` : **conditionnelle, pour tous les bateaux** (décision 2026-10-14) — elle n'apparaît que si le champ Marine Hostess est rempli pour la traversée. Si vide, la ligne est absente (ni ligne vide, ni placeholder).
 - Ligne 1 : nom du vessel **sans espace** (ex. "BIRD1", l'abréviation "B1" de l'ancien Message 2 n'est plus utilisée).
-- Ligne 6 : le nombre de guests est **toujours affiché**, y compris s'il vaut 0 — jamais omis.
+- Ligne 6 : le nombre de guests est **toujours affiché**, y compris s'il vaut 0 — jamais omis. **Exception BIRD 9/10 (2026-10-14) : aucun guest n'est transporté, la ligne `<n>guests` est absente du message, le champ « Total No. of Guest » est masqué dans le formulaire de saisie et absent du manifeste.**
 - `<Total CC>CC` : collé, en majuscules (différent de l'ancien format "12 cc" observé sur l'exemple réel — changement explicite du porteur de projet, pas une erreur).
 
 suivi du **manifeste généré (image ou PDF)** en pièce jointe.

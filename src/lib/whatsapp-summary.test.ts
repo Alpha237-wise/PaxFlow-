@@ -119,6 +119,30 @@ describe("buildWhatsAppSummary (§8.1)", () => {
   });
 });
 
+describe("guests line can be left out (BIRD 9/10 carry no guests)", () => {
+  const base = {
+    portOfOrigin: "A",
+    destination: "B",
+    timeOfDeparture: "07:00",
+    marineHostess: "Mae",
+    captainOnBoard: "C",
+    totalGuests: null,
+    passengers: [],
+  };
+
+  it("omits the guests line when includeGuestsLine is false", () => {
+    const lines = buildWhatsAppSummary({ ...base, vesselName: "BIRD 10", includeGuestsLine: false })
+      .message.split("\n");
+    expect(lines.some((l) => l.endsWith("guests"))).toBe(false);
+    expect(lines.slice(-3)).toEqual(["0CC", "Mh Mae", "Capt C team"]);
+  });
+
+  it("keeps it by default, even at 0", () => {
+    const lines = buildWhatsAppSummary({ ...base, vesselName: "BIRD 1" }).message.split("\n");
+    expect(lines).toContain("0guests");
+  });
+});
+
 describe("Marine Hostess line is conditional (all vessels)", () => {
   const base = {
     portOfOrigin: "Island",
