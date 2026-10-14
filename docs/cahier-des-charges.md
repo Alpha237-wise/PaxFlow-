@@ -162,7 +162,16 @@ Le plan de sièges réel (gabarit `51-seats`, BIRD 1 à 8) est composé de **3 b
 
 Total : 18 + 15 + 18 = 51 sièges. C'est ce layout qui sert de gabarit visuel au composant « Seat Map » (boutons larges, un seul tap pour sélectionner un siège vide, tap pour éditer un siège occupé — voir §16.6).
 
-**Gabarit `50-seats` (BIRD 9 et 10) : non confirmé par photo, approximation provisoire.** En l'absence de photo de référence pour cette variante, le gabarit reprend la même structure que le 51 places en retirant un siège au bloc C (8 paires + 1 siège seul au lieu de 9 paires). À corriger dès qu'une photo réelle du plan BIRD 9/10 est disponible — décision explicite du porteur de projet : « on pourra modifier après » (2026-08-20).
+**Gabarit `50-seats` (BIRD 9 et 10) : confirmé (2026-10-14) à partir de la photo réelle du papier (`reference/manifest B9 and B10.jpg`)** — remplace l'approximation provisoire du 2026-08-20 (« 51 moins un siège »). Le plan imprimé est en **2 blocs** (gauche / droite de l'allée), chacun commençant par une paire près du capitaine :
+
+| Bloc | Sièges | Disposition |
+|---|---|---|
+| Gauche | 1 à 23 | (1,2), puis 7 triplets : (3,4,5), (6,7,8) … (21,22,23) |
+| Droite | 24 à 50 | (24,25), puis 7 triplets : (26,27,28) … (44,45,46), puis (47,48) et (49,50) |
+
+Total : 23 + 27 = 50 sièges. Les rangées de largeurs différentes sont centrées dans leur bloc.
+
+**Gabarit de manifeste par bateau (2026-10-14)** : le formulaire papier de BIRD 9/10 diffère de celui de BIRD 1-8 ; chaque bateau utilise automatiquement le sien, choisi uniquement par `vessels.seat_layout_ref` (BIRD 1-8 → image et calibration « 51 sièges », BIRD 9/10 → « 50 sièges »). Les deux images sont stockées séparément (`manifest_template`, une ligne par gabarit) ; si l'image d'un gabarit n'est pas encore en cache, l'écran retombe sur la reconstruction codée, **jamais sur l'image de l'autre gabarit**.
 
 ### 5.1 Modèle de données proposé pour la flotte
 ```
@@ -227,6 +236,7 @@ Dep@:<Time of Departure, format HHMMhrs, ex. 0700hrs>
 Mh <nom Marine Hostess>
 Capt <nom Captain on board> team
 ```
+- Ligne `Mh <nom>` : **conditionnelle, pour tous les bateaux** (décision 2026-10-14) — elle n'apparaît que si le champ Marine Hostess est rempli pour la traversée. Si vide, la ligne est absente (ni ligne vide, ni placeholder).
 - Ligne 1 : nom du vessel **sans espace** (ex. "BIRD1", différent de l'abréviation "B1" du Message 2).
 - Ligne 6 : le nombre de guests est **toujours affiché**, y compris s'il vaut 0 — jamais omis.
 - `<Total CC>CC` : collé, en majuscules (différent de l'ancien format "12 cc" observé sur l'exemple réel — changement explicite du porteur de projet, pas une erreur).
@@ -291,7 +301,7 @@ Le porteur de projet a fourni une photo du formulaire papier **vierge** (`docs/r
 
 - **En-tête traversée**, disposé en 2 colonnes × 3 lignes comme sur le papier : (Date, Vessel Name), (Time of Departure, Time of Arrival), (Part of Origin, Destination).
 - **Tableau des sièges complet, en DEUX blocs côte à côte** (pas un seul tableau vertical) : bloc gauche = sièges 1 à 25, bloc droit = sièges 26 à la fin (51 pour BIRD 1-8, 50 pour BIRD 9/10) — reproduit la disposition physique du papier. **Toutes les lignes sont affichées**, y compris les sièges non occupés (lignes vides) — ce n'est plus un tableau dynamique limité aux passagers réellement saisis. Colonnes par bloc : Seat / Name / Company ID Number / Department ou Department+Company selon TM/CC.
-- **Bloc équipage et totaux en bas**, avec les valeurs réellement saisies : Captain on board, Mechanic, AB, Marine Hostess, Total No. of TM, Total No. of Guest, Total No. of Contractors No. (= total CC). Ceci **annule** la précédente décision qui excluait Captain/Mechanic/AB du document généré (ils n'étaient utilisés que pour le résumé WhatsApp) — ils apparaissent désormais aussi sur le manifeste.
+- **Bloc équipage et totaux en bas**, avec les valeurs réellement saisies : Captain on board, Mechanic, AB, Marine Hostess, Total No. of TM, Total No. of Guest, Total No. of Contractors No. (= total CC). **Exception BIRD 9/10 (confirmé 2026-10-14)** : le papier de ces bateaux n'imprime pas « Total No. of Guest » — aucun guest n'est transporté sur BIRD 9 et 10 — le champ est donc absent du manifeste (les autres lignes du pied de page, dont Total No. of TM et Total No. of Contractors No., sont inchangées). Ceci **annule** la précédente décision qui excluait Captain/Mechanic/AB du document généré (ils n'étaient utilisés que pour le résumé WhatsApp) — ils apparaissent désormais aussi sur le manifeste.
 - **Non inclus** (confirmé, inchangé) : la grille de codes/cases à cocher visible en haut à droite sur l'exemple papier rempli (usage interne de l'AB, sans lien avec les règles métier de PaxFlow).
 - **Optionnel/bonus, non bloquant** : le petit diagramme de position des sièges (grille de cases numérotées, §5) visible en bas à droite du papier — peut être ajouté plus tard si le temps le permet, ne bloque pas la V1 de cet écran.
 

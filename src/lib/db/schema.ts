@@ -159,13 +159,17 @@ export interface LocalSyncMeta {
   updated_at: string;
 }
 
-// Cached copy of the shared manifest reference photo/PDF (one global row,
-// key fixed to "current" — mirrors the single-row design of the Supabase
-// manifest_template table). Stores the Blob directly; IndexedDB supports
-// this natively. Enables offline manifest generation once the template
-// has been fetched at least once (§16.7 pattern — see vessels/known_people).
+// Cached copy of a shared manifest reference photo/PDF — one row per paper
+// form, mirroring the Supabase manifest_template table's one-row-per-form
+// design: "current" is the 51-seat form (BIRD 1-8, key kept from before
+// there was a second form), "50-seats" is the BIRD 9/10 form (see
+// manifest-template.ts's MANIFEST_TEMPLATES). Stores the Blob directly;
+// IndexedDB supports this natively. Enables offline manifest generation
+// once the template has been fetched at least once (§16.7 pattern — see
+// vessels/known_people). The key is the table's primary key only, so adding
+// a form needs no Dexie schema version bump.
 export interface LocalManifestTemplate {
-  id: "current";
+  id: "current" | "50-seats";
   blob: Blob;
   storage_path: string;
   updated_at: string;

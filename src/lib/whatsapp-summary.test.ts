@@ -90,10 +90,43 @@ describe("buildWhatsAppSummary (§8.1)", () => {
       passengers: [],
     });
     expect(result.message1).toBe(
-      ["BIRD3", "Dep@:", " to ", "0TM", "0CC", "0guests", "Mh ", "Capt  team"].join(
-        "\n",
-      ),
+      ["BIRD3", "Dep@:", " to ", "0TM", "0CC", "0guests", "Capt  team"].join("\n"),
     );
     expect(result.message2).toBe("B3\n");
+  });
+});
+
+describe("Marine Hostess line is conditional (all vessels)", () => {
+  const base = {
+    portOfOrigin: "Island",
+    destination: "Shyouk",
+    timeOfDeparture: "07:00",
+    captainOnBoard: "Sayeesh",
+    totalGuests: 0,
+    passengers: [],
+  };
+
+  it("shows 'Mh <name>' between guests and Capt when filled", () => {
+    for (const vesselName of ["BIRD 1", "BIRD 10"]) {
+      const lines = buildWhatsAppSummary({ ...base, vesselName, marineHostess: "Mae" }).message1.split("\n");
+      expect(lines.slice(-3)).toEqual(["0guests", "Mh Mae", "Capt Sayeesh team"]);
+    }
+  });
+
+  it("omits the line entirely (no empty line, no placeholder) when null, empty or blank", () => {
+    for (const marineHostess of [null, "", "   "]) {
+      for (const vesselName of ["BIRD 1", "BIRD 10"]) {
+        const { message1 } = buildWhatsAppSummary({ ...base, vesselName, marineHostess });
+        const lines = message1.split("\n");
+        expect(lines.some((l) => l.startsWith("Mh"))).toBe(false);
+        expect(lines).not.toContain("");
+        expect(lines.slice(-2)).toEqual(["0guests", "Capt Sayeesh team"]);
+      }
+    }
+  });
+
+  it("trims the name", () => {
+    const { message1 } = buildWhatsAppSummary({ ...base, vesselName: "BIRD 2", marineHostess: "  Mae " });
+    expect(message1.split("\n")).toContain("Mh Mae");
   });
 });

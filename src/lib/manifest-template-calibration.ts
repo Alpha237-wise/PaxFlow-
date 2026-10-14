@@ -84,6 +84,8 @@
 // this class of bug — a sparse sample can land on the correct rows by
 // coincidence while the block's tail is still wrong.
 
+import type { SeatLayoutRef } from "./seat-layouts";
+
 export interface FieldPosition {
   xPct: number;
   yPct: number;
@@ -157,6 +159,12 @@ export interface FieldRowCalibration {
   xPct: number;
   firstRowYPct: number;
   lastRowYPct: number;
+  // Optional measured row-center y for EVERY row of the block, top to
+  // bottom. Takes priority over first/last interpolation when its length
+  // matches the block's row count. Added for the 50-seat reference, whose
+  // photo shows real paper curvature (see the 50-seat section below) that a
+  // straight first-to-last interpolation can miss by up to ~1/6 of a row.
+  rowYPct?: readonly number[];
 }
 
 export interface SeatBlockCalibration {
@@ -207,9 +215,174 @@ export function seatRowYPct(
   rowIndex: number,
   totalRowsInBlock: number,
 ): number {
+  if (field.rowYPct && field.rowYPct.length === totalRowsInBlock) {
+    return field.rowYPct[rowIndex];
+  }
   if (totalRowsInBlock <= 1) return field.firstRowYPct;
   return (
     field.firstRowYPct +
     (rowIndex / (totalRowsInBlock - 1)) * (field.lastRowYPct - field.firstRowYPct)
   );
 }
+
+// ---------------------------------------------------------------------------
+// 50-seat reference (BIRD 9 and BIRD 10) — added 2026-10-14.
+//
+// A different paper form from the 51-seat one above (their printed seat plan
+// is grouped differently, and the footer has NO "Total No. of Guest" line —
+// confirmed by looking at the photo: the footer is Captain on board /
+// Mechanic / AB / Marine Hostess / Total No. of TM / Total No. of
+// Contractors No. only). Hence `totalGuests` is absent from this footer, and
+// the view must not render it.
+//
+// Source: reference/manifest B9 and B10.jpg (4080x3060 phone photo, not a
+// flat scan), stored as reference/manifest-template-b9-b10-final.png (2560x
+// 1920, a plain 2x-ish downscale, same 4:3 ratio, NO perspective warp
+// applied). Because the photo is unwarped, everything below is measured
+// against this exact image — if the stored template is ever replaced by a
+// straightened/re-shot version, ALL of it must be re-measured (same rule as
+// the 51-seat reference).
+//
+// Photo characteristics that shaped the calibration:
+//  - Perspective/rotation: ruled rows fan out (left block row pitch ~3.3%,
+//    right block ~3.1% of image height, and each COLUMN of a block has its
+//    own endpoints — e.g. row 25's center differs by ~1.1pt between the
+//    Name and Company-ID columns of the left block).
+//  - Paper curvature: row pitch shrinks slightly down the page, so the
+//    centers deviate from a straight first-to-last interpolation by up to
+//    ~0.5pt. Every row center is therefore stored explicitly (`rowYPct`).
+//  - Row 25 of the LEFT block is cropped at the bottom edge of the photo
+//    (its bottom ruling is outside the frame for the Name column; the last
+//    center there is extrapolated from the previous pitch, and sits ~1.4pt
+//    from the image's bottom edge). It renders fully but tightly — a re-shot
+//    with a little more margin below would be safer.
+//
+// Method (same discipline as the 51-seat notes above): numpy darkness
+// threshold relative to a blurred local background (copes with the photo's
+// uneven lighting) on the full-resolution JPG; per column, a vertical strip
+// at the text's own x range; row dividers = the longest run of peaks with
+// ~3% spacing, centers = midpoints of consecutive dividers (so the
+// header-label text above the table can't be mistaken for a divider);
+// column x edges from tall (6% of height) horizontal-profile bands so the
+// printed text doesn't register. Text x = cell's left edge + 1.0pt (Name) /
+// +0.45pt (Company ID, Department — narrow cells) . Header values sit on
+// the printed line at the text's own x; footer values are right-aligned and
+// 0.45pt above their line (same "handwriting just above the rule" convention
+// as the 51-seat footer). All six footer lines end within ~0.4pt of each
+// other on this form (unlike the 51-seat form's short Contractors line), so
+// all six values share ONE right edge instead of the 51-seat form's
+// separate names/totals columns.
+// ---------------------------------------------------------------------------
+
+const HEADER_FIELDS_50 = {
+  date: { xPct: 11.9, yPct: 2.39 } satisfies FieldPosition,
+  vesselName: { xPct: 38.49, yPct: 3.1 } satisfies FieldPosition,
+  timeOfDeparture: { xPct: 11.9, yPct: 5.72 } satisfies FieldPosition,
+  timeOfArrival: { xPct: 38.49, yPct: 6.27 } satisfies FieldPosition,
+  portOfOrigin: { xPct: 11.9, yPct: 9.06 } satisfies FieldPosition,
+  destination: { xPct: 38.49, yPct: 9.45 } satisfies FieldPosition,
+} as const;
+
+// No totalGuests — see above.
+const FOOTER_FIELDS_50 = {
+  captainOnBoard: { xPct: 95.8, yPct: 71.59, align: "right" } satisfies FieldPosition,
+  mechanic: { xPct: 95.8, yPct: 75.72, align: "right" } satisfies FieldPosition,
+  abName: { xPct: 95.8, yPct: 79.85, align: "right" } satisfies FieldPosition,
+  marineHostess: { xPct: 95.8, yPct: 84.0, align: "right" } satisfies FieldPosition,
+  totalTM: { xPct: 95.8, yPct: 88.16, align: "right" } satisfies FieldPosition,
+  totalContractors: { xPct: 95.8, yPct: 92.34, align: "right" } satisfies FieldPosition,
+} as const;
+
+const LEFT_SEAT_BLOCK_50: SeatBlockCalibration = {
+  name: {
+    xPct: 5.9,
+    firstRowYPct: 18.7,
+    lastRowYPct: 98.62,
+    rowYPct: [
+      18.7, 22.08, 25.43, 28.78, 32.11, 35.43, 38.74, 42.06, 45.38, 48.7, 52.01, 55.32, 58.62,
+      61.92, 65.23, 68.54, 71.85, 75.18, 78.52, 81.86, 85.2, 88.55, 91.91, 95.26, 98.62,
+    ],
+  },
+  companyId: {
+    xPct: 24.1,
+    firstRowYPct: 18.07,
+    lastRowYPct: 97.48,
+    rowYPct: [
+      18.07, 21.4, 24.74, 28.08, 31.42, 34.76, 38.11, 41.45, 44.8, 48.14, 51.47, 54.8, 58.13,
+      61.45, 64.76, 68.07, 71.37, 74.68, 77.96, 81.25, 84.52, 87.78, 91.01, 94.24, 97.48,
+    ],
+  },
+  department: {
+    xPct: 30.3,
+    firstRowYPct: 18.07,
+    lastRowYPct: 97.14,
+    rowYPct: [
+      18.07, 21.38, 24.69, 28.01, 31.32, 34.64, 37.95, 41.27, 44.6, 47.91, 51.22, 54.52, 57.81,
+      61.1, 64.4, 67.69, 70.99, 74.28, 77.56, 80.84, 84.12, 87.39, 90.67, 93.91, 97.14,
+    ],
+  },
+};
+
+const RIGHT_SEAT_BLOCK_50: SeatBlockCalibration = {
+  name: {
+    xPct: 44.0,
+    firstRowYPct: 17.81,
+    lastRowYPct: 93.46,
+    rowYPct: [
+      17.81, 20.96, 24.11, 27.28, 30.45, 33.62, 36.79, 39.95, 43.09, 46.22, 49.34, 52.45, 55.56,
+      58.68, 61.81, 64.95, 68.11, 71.28, 74.46, 77.64, 80.81, 83.98, 87.14, 90.29, 93.46,
+    ],
+  },
+  companyId: {
+    xPct: 62.0,
+    firstRowYPct: 17.75,
+    lastRowYPct: 92.83,
+    rowYPct: [
+      17.75, 20.8, 23.87, 26.96, 30.06, 33.17, 36.29, 39.41, 42.54, 45.66, 48.77, 51.87, 54.98,
+      58.11, 61.25, 64.41, 67.57, 70.73, 73.89, 77.06, 80.22, 83.37, 86.5, 89.64, 92.83,
+    ],
+  },
+  department: {
+    xPct: 68.0,
+    firstRowYPct: 17.97,
+    lastRowYPct: 92.52,
+    rowYPct: [
+      17.97, 20.98, 24.0, 27.04, 30.08, 33.13, 36.19, 39.25, 42.31, 45.4, 48.5, 51.6, 54.72,
+      57.84, 60.96, 64.1, 67.23, 70.38, 73.53, 76.68, 79.83, 82.98, 86.14, 89.31, 92.52,
+    ],
+  },
+};
+
+// Everything the renderer needs for one paper form. `footer.totalGuests` is
+// optional: a form without that printed line simply has no such entry, and
+// the view renders only what is present.
+export interface ManifestCalibration {
+  header: Record<keyof typeof HEADER_FIELDS, FieldPosition>;
+  footer: Record<Exclude<keyof typeof FOOTER_FIELDS, "totalGuests">, FieldPosition> & {
+    totalGuests?: FieldPosition;
+  };
+  leftBlock: SeatBlockCalibration;
+  rightBlock: SeatBlockCalibration;
+  leftBlockMaxSeat: number;
+}
+
+// One calibration per physical form, keyed by the same seat_layout_ref that
+// picks the template image (manifest-template.ts) — the image and the
+// calibration measured against it are always selected by this one key, so
+// they cannot get out of step.
+export const MANIFEST_CALIBRATIONS: Record<SeatLayoutRef, ManifestCalibration> = {
+  "51-seats": {
+    header: HEADER_FIELDS,
+    footer: FOOTER_FIELDS,
+    leftBlock: LEFT_SEAT_BLOCK,
+    rightBlock: RIGHT_SEAT_BLOCK,
+    leftBlockMaxSeat: LEFT_BLOCK_MAX_SEAT,
+  },
+  "50-seats": {
+    header: HEADER_FIELDS_50,
+    footer: FOOTER_FIELDS_50,
+    leftBlock: LEFT_SEAT_BLOCK_50,
+    rightBlock: RIGHT_SEAT_BLOCK_50,
+    leftBlockMaxSeat: 25,
+  },
+};

@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { MANIFEST_TEMPLATE_BUCKET } from "@/lib/manifest-template";
+import { MANIFEST_TEMPLATE_BUCKET, MANIFEST_TEMPLATES } from "@/lib/manifest-template";
+import type { SeatLayoutRef } from "@/lib/seat-layouts";
 import { updateUserRole, updateVesselStatus } from "./actions";
 import { ManifestTemplateUpload } from "./manifest-template-upload";
 
@@ -55,18 +56,26 @@ export default async function SuperAdminPage() {
     .order("created_at", { ascending: false })
     .limit(50);
 
-  const { data: manifestTemplate } = await supabase
-    .from("manifest_template")
-    .select("storage_path, updated_at")
-    .maybeSingle();
-
-  let manifestTemplatePreviewUrl: string | null = null;
-  if (manifestTemplate) {
-    const { data: signed } = await supabase.storage
-      .from(MANIFEST_TEMPLATE_BUCKET)
-      .createSignedUrl(manifestTemplate.storage_path, 300);
-    manifestTemplatePreviewUrl = signed?.signedUrl ?? null;
+  // One row per paper form, looked up by its own well-known id — never a
+  // bare .maybeSingle() over the whole table, which errors once there is
+  // more than one row.
+  async function loadManifestTemplate(layoutRef: SeatLayoutRef) {
+    const { data: row } = await supabase
+      .from("manifest_template")
+      .select("storage_path, updated_at")
+      .eq("id", MANIFEST_TEMPLATES[layoutRef].rowId)
+      .maybeSingle();
+    let previewUrl: string | null = null;
+    if (row) {
+      const { data: signed } = await supabase.storage
+        .from(MANIFEST_TEMPLATE_BUCKET)
+        .createSignedUrl(row.storage_path, 300);
+      previewUrl = signed?.signedUrl ?? null;
+    }
+    return { previewUrl, updatedAt: row?.updated_at ?? null };
   }
+  const template51 = await loadManifestTemplate("51-seats");
+  const template50 = await loadManifestTemplate("50-seats");
 
   return (
     <div className="flex flex-1 flex-col items-center bg-zinc-50 px-6 py-8 dark:bg-black">
@@ -163,8 +172,18 @@ export default async function SuperAdminPage() {
 
         <ManifestTemplateUpload
           userId={user.id}
-          currentPreviewUrl={manifestTemplatePreviewUrl}
-          currentUpdatedAt={manifestTemplate?.updated_at ?? null}
+          layoutRef="51-seats"
+          title="Manifest template — BIRD 1-8 (51 seats)"
+          currentPreviewUrl={template51.previewUrl}
+          currentUpdatedAt={template51.updatedAt}
+        />
+
+        <ManifestTemplateUpload
+          userId={user.id}
+          layoutRef="50-seats"
+          title="Manifest template — BIRD 9-10 (50 seats)"
+          currentPreviewUrl={template50.previewUrl}
+          currentUpdatedAt={template50.updatedAt}
         />
 
         <section className="space-y-2">

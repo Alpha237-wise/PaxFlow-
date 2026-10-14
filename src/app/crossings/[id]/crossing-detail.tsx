@@ -190,7 +190,9 @@ export function CrossingDetail({ userId }: { userId: string }) {
     crossingId,
     vesselName: vesselLabel,
     crossing: crossing ?? EMPTY_MANIFEST_CROSSING,
-    seatLayoutRef: vessel?.seat_layout_ref ?? "51-seats",
+    // null (not a default form) until the vessel resolves — see
+    // useManifestExport.
+    seatLayoutRef: vessel?.seat_layout_ref ?? null,
   });
 
   if (result === undefined) {
@@ -452,6 +454,7 @@ export function CrossingDetail({ userId }: { userId: string }) {
 
       <ManifestQuickActions
         busy={manifestExport.busy}
+        ready={manifestExport.ready}
         handleDownloadPdf={manifestExport.handleDownloadPdf}
         handleDownloadImage={manifestExport.handleDownloadImage}
       />

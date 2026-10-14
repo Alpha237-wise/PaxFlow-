@@ -1,4 +1,10 @@
-// One-off seed: uploads the current manifest reference
+// One-off seed: uploads a manifest reference for ONE paper form, chosen by
+// argv[2] ("51-seats", the default, or "50-seats" for BIRD 9/10 —
+// reference/manifest-template-b9-b10-final.png, a 2560x1920 downscale of
+// reference/manifest B9 and B10.jpg, added 2026-10-14; the slots mirror
+// src/lib/manifest-template.ts's MANIFEST_TEMPLATES). Usage:
+//   node --env-file=.env.local scripts/seed-manifest-template.mjs [51-seats|50-seats]
+// The 51-seat reference is
 // (reference/manifest-template-v2-final.png, a 2x upscale of
 // reference/manifest-blank-template-v2.jpg — replaces the earlier
 // PDF-derived reference, 2026-09-11) as the shared manifest template,
@@ -18,10 +24,26 @@ const admin = createClient(url, serviceKey, {
 });
 
 const BUCKET = "manifest-template";
-const ROW_ID = "11111111-1111-1111-1111-111111111111";
-const STORAGE_PATH = "current.png";
+// Keep in sync with src/lib/manifest-template.ts's MANIFEST_TEMPLATES.
+const SLOTS = {
+  "51-seats": {
+    rowId: "11111111-1111-1111-1111-111111111111",
+    storagePath: "current.png",
+    file: "reference/manifest-template-v2-final.png",
+  },
+  "50-seats": {
+    rowId: "22222222-2222-2222-2222-222222222222",
+    storagePath: "current-50-seats.png",
+    file: "reference/manifest-template-b9-b10-final.png",
+  },
+};
+const layoutRef = process.argv[2] ?? "51-seats";
+const slot = SLOTS[layoutRef];
+if (!slot) throw new Error(`Unknown layout "${layoutRef}" (expected ${Object.keys(SLOTS).join(" or ")})`);
+const ROW_ID = slot.rowId;
+const STORAGE_PATH = slot.storagePath;
 
-const fileBytes = readFileSync("reference/manifest-template-v2-final.png");
+const fileBytes = readFileSync(slot.file);
 
 const { error: uploadError } = await admin.storage
   .from(BUCKET)

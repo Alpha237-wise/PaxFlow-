@@ -4,14 +4,21 @@ import { useEffect, useRef, useState, type ChangeEvent, type PointerEvent } from
 import { useRouter } from "next/navigation";
 import { warpQuadToCanvas, type Point } from "@/lib/perspective-warp";
 import { uploadManifestTemplate } from "@/lib/manifest-template";
+import type { SeatLayoutRef } from "@/lib/seat-layouts";
 
-// Output aspect ratio matches reference/manifest-blank-template-v2.jpg
-// (1280x839, doubled here) — the calibration in
+// Output aspect ratio per paper form — the calibration in
 // manifest-template-calibration.ts was measured against this shape, so
-// replacing the template must keep the same ratio or the overlay
-// positions will drift.
-const OUTPUT_WIDTH = 2560;
-const OUTPUT_HEIGHT = 1678;
+// replacing a template must keep the same ratio or the overlay positions
+// will drift. 51-seats matches reference/manifest-blank-template-v2.jpg
+// (1280x839, doubled here); 50-seats matches reference/manifest B9 and
+// B10.jpg (4:3). NOTE: the 50-seat calibration was measured on that photo
+// as-is (no perspective warp), so a replacement that goes through
+// "Straighten" below changes the geometry and needs re-measuring — prefer
+// scripts/seed-manifest-template.mjs with a re-measured calibration.
+const OUTPUT_SIZE: Record<SeatLayoutRef, { width: number; height: number }> = {
+  "51-seats": { width: 2560, height: 1678 },
+  "50-seats": { width: 2560, height: 1920 },
+};
 
 type CornerPct = { x: number; y: number };
 
@@ -59,10 +66,14 @@ function PreviewCanvas({ canvas }: { canvas: HTMLCanvasElement }) {
 // perspective-correct via warpQuadToCanvas -> preview -> confirm upload.
 export function ManifestTemplateUpload({
   userId,
+  layoutRef,
+  title,
   currentPreviewUrl,
   currentUpdatedAt,
 }: {
   userId: string;
+  layoutRef: SeatLayoutRef;
+  title: string;
   currentPreviewUrl: string | null;
   currentUpdatedAt: string | null;
 }) {
@@ -145,8 +156,8 @@ export function ManifestTemplateUpload({
         imageEl.naturalWidth,
         imageEl.naturalHeight,
         srcCorners,
-        OUTPUT_WIDTH,
-        OUTPUT_HEIGHT,
+        OUTPUT_SIZE[layoutRef].width,
+        OUTPUT_SIZE[layoutRef].height,
       );
       setPreviewCanvas(canvas);
       setStep("preview");
@@ -169,7 +180,7 @@ export function ManifestTemplateUpload({
         setError("Could not export the corrected image.");
         return;
       }
-      const { error: uploadError } = await uploadManifestTemplate(blob, userId);
+      const { error: uploadError } = await uploadManifestTemplate(blob, userId, layoutRef);
       if (uploadError) {
         setError(uploadError);
         return;
@@ -195,7 +206,7 @@ export function ManifestTemplateUpload({
   return (
     <section className="space-y-2">
       <h2 className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-        Manifest template
+        {title}
       </h2>
 
       {step === "idle" && (

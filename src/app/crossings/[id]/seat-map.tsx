@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getDb } from "@/lib/db";
-import { SEAT_LAYOUTS } from "@/lib/seat-layouts";
+import { SEAT_LAYOUTS, type SeatLayoutRef } from "@/lib/seat-layouts";
 import type { LocalPassenger } from "@/lib/db/schema";
 import { PassengerSheet } from "./passenger-sheet";
 
@@ -13,7 +13,7 @@ export function SeatMap({
   userId,
 }: {
   crossingId: string;
-  seatLayoutRef: "51-seats" | "50-seats";
+  seatLayoutRef: SeatLayoutRef;
   userId: string;
 }) {
   const [openSeat, setOpenSeat] = useState<number | null>(null);
@@ -30,7 +30,8 @@ export function SeatMap({
 
   return (
     // No max-width cap here (unlike the other sections on this page) — the
-    // three blocks need ~437px side by side, so this is left free to use
+    // blocks (3 on the 51-seat plan, ~437px; 2 on the 50-seat plan) sit side
+    // by side, so this is left free to use
     // whatever width the page wrapper gives it (capped at max-w-sm on
     // phones, wider from md: up) rather than forcing horizontal scroll on
     // tablets that have the room to show the whole seat map at once.
@@ -46,7 +47,10 @@ export function SeatMap({
             className="flex shrink-0 flex-col gap-1.5 rounded-lg border border-zinc-200 p-2 dark:border-zinc-800"
           >
             {block.map((row, rowIndex) => (
-              <div key={rowIndex} className="flex gap-1.5">
+              // justify-center: the 50-seat plan has rows of different widths
+              // inside one block (a pair above/below rows of three), centred
+              // as printed; a no-op for the 51-seat plan's uniform rows.
+              <div key={rowIndex} className="flex justify-center gap-1.5">
                 {row.map((seatNumber) => {
                   const passenger = bySeat.get(seatNumber);
                   return (

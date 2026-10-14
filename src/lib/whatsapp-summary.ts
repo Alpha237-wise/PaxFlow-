@@ -45,6 +45,10 @@ function formatDepartureTime(time: string | null): string {
 export function buildWhatsAppSummary(input: WhatsAppSummaryInput): WhatsAppSummary {
   const summary = summarizeCrossing(input.passengers);
 
+  // The "Mh <name>" line exists only when a Marine Hostess was entered for
+  // this crossing — no empty line or placeholder otherwise (any vessel).
+  const marineHostess = input.marineHostess?.trim();
+
   const message1 = [
     vesselNameCompact(input.vesselName),
     `Dep@:${formatDepartureTime(input.timeOfDeparture)}`,
@@ -52,7 +56,7 @@ export function buildWhatsAppSummary(input: WhatsAppSummaryInput): WhatsAppSumma
     `${summary.totalTM}TM`,
     `${summary.totalCC}CC`,
     `${input.totalGuests ?? 0}guests`,
-    `Mh ${input.marineHostess ?? ""}`,
+    ...(marineHostess ? [`Mh ${marineHostess}`] : []),
     `Capt ${input.captainOnBoard ?? ""} team`,
   ].join("\n");
 

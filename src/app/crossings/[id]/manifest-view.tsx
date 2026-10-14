@@ -10,14 +10,14 @@ import {
   type ManifestRow,
 } from "@/lib/manifest";
 import {
-  HEADER_FIELDS,
-  FOOTER_FIELDS,
-  LEFT_SEAT_BLOCK,
-  RIGHT_SEAT_BLOCK,
-  LEFT_BLOCK_MAX_SEAT,
+  MANIFEST_CALIBRATIONS,
   seatRowYPct,
   type FieldPosition,
+  type ManifestCalibration,
+  type SeatBlockCalibration,
 } from "@/lib/manifest-template-calibration";
+import { getCachedManifestTemplate } from "@/lib/manifest-template";
+import type { SeatLayoutRef } from "@/lib/seat-layouts";
 
 // Fixed pixel width, independent of the viewport: this element is exported
 // as an image/PDF, not viewed responsively (§9.4 — deterministic template).
@@ -92,18 +92,23 @@ const SEAT_NARROW_COLUMN_WEIGHT: CSSProperties["fontWeight"] = 400;
 // photographed/scanned paper form (§9 rewrite, 2026-08-20) — replaces the
 // earlier coded HTML reconstruction of the paper layout. Positions come
 // from manifest-template-calibration.ts, expressed as percentages of this
-// image so the same calibration works at any render width.
-function PhotoOverlayManifest({
+// image so the same calibration works at any render width. `calibration`
+// must be the one measured against `templateUrl`'s form (both come from the
+// same seat_layout_ref — see useManifestExport).
+export function PhotoOverlayManifest({
   templateUrl,
   manifest,
+  calibration,
 }: {
   templateUrl: string;
   manifest: ManifestData;
+  calibration: ManifestCalibration;
 }) {
-  const leftRows = manifest.rows.filter((r) => r.seat <= LEFT_BLOCK_MAX_SEAT);
-  const rightRows = manifest.rows.filter((r) => r.seat > LEFT_BLOCK_MAX_SEAT);
+  const { header, footer, leftBlock, rightBlock, leftBlockMaxSeat } = calibration;
+  const leftRows = manifest.rows.filter((r) => r.seat <= leftBlockMaxSeat);
+  const rightRows = manifest.rows.filter((r) => r.seat > leftBlockMaxSeat);
 
-  function seatRows(rows: ManifestRow[], block: typeof LEFT_SEAT_BLOCK) {
+  function seatRows(rows: ManifestRow[], block: SeatBlockCalibration) {
     return rows.map((row, i) => {
       // Each column gets its own yPct — the reference scan's row height
       // itself drifts slightly across a block's width (paper/perspective
@@ -158,23 +163,27 @@ function PhotoOverlayManifest({
           html-to-image, which needs a plain <img> it can rasterize directly */}
       <img src={templateUrl} alt="Manifest template" style={{ width: "100%", display: "block" }} />
 
-      <span style={fieldStyle(HEADER_FIELDS.date)}>{manifest.date}</span>
-      <span style={fieldStyle(HEADER_FIELDS.vesselName)}>{manifest.vesselName}</span>
-      <span style={fieldStyle(HEADER_FIELDS.timeOfDeparture)}>{manifest.timeOfDeparture}</span>
-      <span style={fieldStyle(HEADER_FIELDS.timeOfArrival)}>{manifest.timeOfArrival}</span>
-      <span style={fieldStyle(HEADER_FIELDS.portOfOrigin)}>{manifest.portOfOrigin}</span>
-      <span style={fieldStyle(HEADER_FIELDS.destination)}>{manifest.destination}</span>
+      <span style={fieldStyle(header.date)}>{manifest.date}</span>
+      <span style={fieldStyle(header.vesselName)}>{manifest.vesselName}</span>
+      <span style={fieldStyle(header.timeOfDeparture)}>{manifest.timeOfDeparture}</span>
+      <span style={fieldStyle(header.timeOfArrival)}>{manifest.timeOfArrival}</span>
+      <span style={fieldStyle(header.portOfOrigin)}>{manifest.portOfOrigin}</span>
+      <span style={fieldStyle(header.destination)}>{manifest.destination}</span>
 
-      {seatRows(leftRows, LEFT_SEAT_BLOCK)}
-      {seatRows(rightRows, RIGHT_SEAT_BLOCK)}
+      {seatRows(leftRows, leftBlock)}
+      {seatRows(rightRows, rightBlock)}
 
-      <span style={fieldStyle(FOOTER_FIELDS.captainOnBoard)}>{manifest.captainOnBoard}</span>
-      <span style={fieldStyle(FOOTER_FIELDS.mechanic)}>{manifest.mechanic}</span>
-      <span style={fieldStyle(FOOTER_FIELDS.abName)}>{manifest.abName}</span>
-      <span style={fieldStyle(FOOTER_FIELDS.marineHostess)}>{manifest.marineHostess}</span>
-      <span style={fieldStyle(FOOTER_FIELDS.totalTM)}>{manifest.totalTM}</span>
-      <span style={fieldStyle(FOOTER_FIELDS.totalGuests)}>{manifest.totalGuests}</span>
-      <span style={fieldStyle(FOOTER_FIELDS.totalContractors)}>{manifest.totalContractors}</span>
+      <span style={fieldStyle(footer.captainOnBoard)}>{manifest.captainOnBoard}</span>
+      <span style={fieldStyle(footer.mechanic)}>{manifest.mechanic}</span>
+      <span style={fieldStyle(footer.abName)}>{manifest.abName}</span>
+      <span style={fieldStyle(footer.marineHostess)}>{manifest.marineHostess}</span>
+      <span style={fieldStyle(footer.totalTM)}>{manifest.totalTM}</span>
+      {/* Only forms that actually print a "Total No. of Guest" line have a
+          position for it (the 50-seat BIRD 9/10 form doesn't). */}
+      {footer.totalGuests && (
+        <span style={fieldStyle(footer.totalGuests)}>{manifest.totalGuests}</span>
+      )}
+      <span style={fieldStyle(footer.totalContractors)}>{manifest.totalContractors}</span>
     </div>
   );
 }
@@ -212,9 +221,15 @@ function SeatTable({ rows }: { rows: ManifestRow[] }) {
 // (§9 rewrite) — the earlier coded reconstruction of the paper layout,
 // kept as-is so a crossing is never unexportable while the Super Admin
 // hasn't uploaded a template.
-function CodedTemplateManifest({ manifest }: { manifest: ManifestData }) {
-  const leftRows = manifest.rows.filter((r) => r.seat <= LEFT_BLOCK_MAX_SEAT);
-  const rightRows = manifest.rows.filter((r) => r.seat > LEFT_BLOCK_MAX_SEAT);
+function CodedTemplateManifest({
+  manifest,
+  calibration,
+}: {
+  manifest: ManifestData;
+  calibration: ManifestCalibration;
+}) {
+  const leftRows = manifest.rows.filter((r) => r.seat <= calibration.leftBlockMaxSeat);
+  const rightRows = manifest.rows.filter((r) => r.seat > calibration.leftBlockMaxSeat);
 
   return (
     <div className="bg-white p-6 text-black">
@@ -283,10 +298,12 @@ function CodedTemplateManifest({ manifest }: { manifest: ManifestData }) {
             <span className="text-zinc-500">Total No. of TM: </span>
             {manifest.totalTM}
           </div>
-          <div>
-            <span className="text-zinc-500">Total No. of Guest: </span>
-            {manifest.totalGuests}
-          </div>
+          {calibration.footer.totalGuests && (
+            <div>
+              <span className="text-zinc-500">Total No. of Guest: </span>
+              {manifest.totalGuests}
+            </div>
+          )}
           <div>
             <span className="text-zinc-500">Total No. of Contractors No.: </span>
             {manifest.totalContractors}
@@ -310,8 +327,15 @@ export function useManifestExport({
   crossingId: string;
   vesselName: string;
   crossing: ManifestCrossingInput;
-  seatLayoutRef: "51-seats" | "50-seats";
+  // null while the vessel (which owns the seat layout) hasn't resolved yet:
+  // no template is chosen and exports stay disabled until it does, rather
+  // than defaulting to one form and risking the wrong one for a BIRD 9/10
+  // crossing.
+  seatLayoutRef: SeatLayoutRef | null;
 }) {
+  // Only used for the (layout-independent-until-resolved) row/calibration
+  // shape below — never to pick a template image.
+  const layoutForData: SeatLayoutRef = seatLayoutRef ?? "51-seats";
   const manifestRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState<"pdf" | "image" | null>(null);
 
@@ -320,7 +344,11 @@ export function useManifestExport({
     [crossingId],
   );
 
-  const template = useLiveQuery(() => getDb().manifest_template.get("current"), []);
+  // Strictly this layout's own template: BIRD 9/10 can never be handed the
+  // 51-seat image (nor the reverse). If this layout's image isn't cached
+  // yet, templateUrl stays null and the coded fallback renders instead.
+  const template = useLiveQuery(() => getCachedManifestTemplate(seatLayoutRef), [seatLayoutRef]);
+
 
   // Recomputed only when the cached blob actually changes (e.g. after a
   // Super Admin replaces the template and this device syncs it down) —
@@ -340,7 +368,7 @@ export function useManifestExport({
     crossing,
     vesselName,
     passengers ?? [],
-    seatLayoutRef,
+    layoutForData,
   );
 
   async function toPngDataUrl(): Promise<{ url: string; width: number; height: number }> {
@@ -387,7 +415,16 @@ export function useManifestExport({
     }
   }
 
-  return { manifest, templateUrl, manifestRef, busy, handleDownloadPdf, handleDownloadImage };
+  return {
+    manifest,
+    templateUrl: seatLayoutRef ? templateUrl : null,
+    calibration: MANIFEST_CALIBRATIONS[layoutForData],
+    ready: seatLayoutRef !== null,
+    manifestRef,
+    busy,
+    handleDownloadPdf,
+    handleDownloadImage,
+  };
 }
 
 export type ManifestExport = ReturnType<typeof useManifestExport>;
@@ -400,9 +437,10 @@ export type ManifestExport = ReturnType<typeof useManifestExport>;
 // share this same state so there's no duplicate export work.
 export function ManifestQuickActions({
   busy,
+  ready,
   handleDownloadPdf,
   handleDownloadImage,
-}: Pick<ManifestExport, "busy" | "handleDownloadPdf" | "handleDownloadImage">) {
+}: Pick<ManifestExport, "busy" | "ready" | "handleDownloadPdf" | "handleDownloadImage">) {
   return (
     <div className="w-full max-w-sm rounded-lg border-2 border-zinc-900 bg-white p-3 dark:border-zinc-50 dark:bg-zinc-950">
       <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Manifest</p>
@@ -413,7 +451,7 @@ export function ManifestQuickActions({
         <button
           type="button"
           onClick={handleDownloadPdf}
-          disabled={busy !== null}
+          disabled={busy !== null || !ready}
           className="flex-1 rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
         >
           {busy === "pdf" ? "Generating…" : "Download PDF"}
@@ -421,7 +459,7 @@ export function ManifestQuickActions({
         <button
           type="button"
           onClick={handleDownloadImage}
-          disabled={busy !== null}
+          disabled={busy !== null || !ready}
           className="flex-1 rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300"
         >
           {busy === "image" ? "Generating…" : "Download Image"}
@@ -437,8 +475,10 @@ export function ManifestQuickActions({
 export function ManifestPreviewSection({
   manifest,
   templateUrl,
+  calibration,
   manifestRef,
   busy,
+  ready,
   handleDownloadPdf,
   handleDownloadImage,
 }: ManifestExport) {
@@ -451,9 +491,13 @@ export function ManifestPreviewSection({
       <div className="overflow-x-auto rounded-md border border-zinc-200 dark:border-zinc-800">
         <div ref={manifestRef} style={{ width: MANIFEST_WIDTH }} className="bg-white">
           {templateUrl ? (
-            <PhotoOverlayManifest templateUrl={templateUrl} manifest={manifest} />
+            <PhotoOverlayManifest
+              templateUrl={templateUrl}
+              manifest={manifest}
+              calibration={calibration}
+            />
           ) : (
-            <CodedTemplateManifest manifest={manifest} />
+            <CodedTemplateManifest manifest={manifest} calibration={calibration} />
           )}
         </div>
       </div>
@@ -462,7 +506,7 @@ export function ManifestPreviewSection({
         <button
           type="button"
           onClick={handleDownloadPdf}
-          disabled={busy !== null}
+          disabled={busy !== null || !ready}
           className="flex-1 rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
         >
           {busy === "pdf" ? "Generating…" : "Download PDF"}
@@ -470,7 +514,7 @@ export function ManifestPreviewSection({
         <button
           type="button"
           onClick={handleDownloadImage}
-          disabled={busy !== null}
+          disabled={busy !== null || !ready}
           className="flex-1 rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300"
         >
           {busy === "image" ? "Generating…" : "Download Image"}

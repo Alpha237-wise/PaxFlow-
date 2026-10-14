@@ -19,19 +19,33 @@ const FIFTY_ONE_SEATS: SeatLayout = {
   ],
 };
 
-// NOT confirmed by a reference photo (BIRD 9/10) — same structure as
-// 51-seats with one seat removed from block C. Explicit decision from the
-// project owner (2026-08-20): build against 51 seats now, fix this gabarit
-// once a real photo is available (docs/cahier-des-charges.md §5).
+// Confirmed from the real BIRD 9/10 paper form (reference/manifest B9 and
+// B10.jpg, 2026-10-14) — replaces the earlier "51 seats minus one" guess.
+// The printed plan has two columns (left / right of the aisle), each headed
+// by a pair next to the boat captain, then seven rows of three:
+//   left : [1,2], then triplets 3-23
+//   right: [24,25], then triplets 26-46, then [47,48] and [49,50]
+// = 23 + 27 = 50 seats.
 const FIFTY_SEATS: SeatLayout = {
   blocks: [
-    [[1, 2], [3, 4], [5, 6], [7, 8], [9, 10], [11, 12], [13, 14], [15, 16], [17, 18]],
-    [[19, 20, 21], [22, 23, 24], [25, 26, 27], [28, 29, 30], [31, 32, 33]],
-    [[34, 35], [36, 37], [38, 39], [40, 41], [42, 43], [44, 45], [46, 47], [48, 49], [50]],
+    [
+      [1, 2],
+      [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14], [15, 16, 17], [18, 19, 20], [21, 22, 23],
+    ],
+    [
+      [24, 25],
+      [26, 27, 28], [29, 30, 31], [32, 33, 34], [35, 36, 37], [38, 39, 40], [41, 42, 43], [44, 45, 46],
+      [47, 48],
+      [49, 50],
+    ],
   ],
 };
 
-export const SEAT_LAYOUTS: Record<"51-seats" | "50-seats", SeatLayout> = {
+// The paper form (manifest template image + its calibration) is selected by
+// this same key — see manifest-template.ts and manifest-template-calibration.ts.
+export type SeatLayoutRef = "51-seats" | "50-seats";
+
+export const SEAT_LAYOUTS: Record<SeatLayoutRef, SeatLayout> = {
   "51-seats": FIFTY_ONE_SEATS,
   "50-seats": FIFTY_SEATS,
 };
