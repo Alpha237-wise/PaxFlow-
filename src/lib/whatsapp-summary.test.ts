@@ -46,7 +46,7 @@ describe("buildWhatsAppSummary (§8.1)", () => {
       ].join("\n"),
     );
     expect(result.message2).toBe(
-      ["B1", "7fnb", "3Eng", "", "2fnb/shisha-souls", "1valet"].join("\n"),
+      ["B1", "7- fnb", "3- Eng", "", "2- fnb/shisha-souls", "1- valet"].join("\n"),
     );
   });
 

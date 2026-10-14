@@ -60,8 +60,11 @@ export function buildWhatsAppSummary(input: WhatsAppSummaryInput): WhatsAppSumma
     `Capt ${input.captainOnBoard ?? ""} team`,
   ].join("\n");
 
-  const tmLines = summary.tmByDepartment.map((g) => `${g.count}${g.label}`);
-  const ccLines = summary.ccByGroup.map((g) => `${g.count}${g.label}`);
+  // "<count>- <label>" for both groups (format corrected by the project
+  // owner 2026-10-14). The label is injected exactly as entered/combined by
+  // crossing-summary.ts (e.g. "Eng/Qsp") — never reformatted here.
+  const tmLines = summary.tmByDepartment.map((g) => `${g.count}- ${g.label}`);
+  const ccLines = summary.ccByGroup.map((g) => `${g.count}- ${g.label}`);
 
   const message2 = [
     abbreviateVesselName(input.vesselName),

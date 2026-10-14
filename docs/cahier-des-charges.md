@@ -245,38 +245,38 @@ suivi du **manifeste généré (image ou PDF)** en pièce jointe.
 
 **Message 2 — Répartition par département :**
 
-**Format exact confirmé (2026-08-20) par `docs/reference/whatsapp-summary-example.jpg`** — corrige la version précédente de ce document, qui montrait à tort un format `<département>: <effectif>`. Le format réel colle l'effectif directement devant le libellé, sans deux-points ni espace :
+**Format corrigé (2026-10-14) par le porteur de projet** — remplace le format « effectif collé au libellé » (`7fnb`) confirmé le 2026-08-20 par `docs/reference/whatsapp-summary-example.jpg`. Pour les deux groupes (TM et CC) : effectif, puis un tiret suivi d'une espace, puis le libellé — `<effectif>- <libellé>`. Le libellé est affiché exactement tel que saisi/combiné (ex. `Eng/Qsp`), sans reformatage :
 
 ```
 <Vessel Name abrégé, ex. B1>
-<effectif TM 1><département 1>
-<effectif TM 2><département 2>
+<effectif TM 1>- <département 1>
+<effectif TM 2>- <département 2>
 ...
 
-<effectif CC 1><département/compagnie 1>
-<effectif CC 2><département/compagnie 2>
+<effectif CC 1>- <département/compagnie 1>
+<effectif CC 2>- <département/compagnie 2>
 ...
 ```
 
 Exemple réel :
 ```
 B1
-7fnb
-3Eng
-3Spa
-6hk
-11recreation
-2finance
-2fo
-5kit
+7- fnb
+3- Eng
+3- Spa
+6- hk
+11- recreation
+2- finance
+2- fo
+5- kit
 
-2fnb/shisha-souls
-1valet
-3IT/ORIX
-3Eng/Qsp
-1canteen/uhs
-1Eng/SEGAFREDO
-1kit/uhs
+2- fnb/shisha-souls
+1- valet
+3- IT/ORIX
+3- Eng/Qsp
+1- canteen/uhs
+1- Eng/SEGAFREDO
+1- kit/uhs
 ```
 - La première liste (avant la ligne vide) reprend les **TM regroupés par département**.
 - La seconde liste (après la ligne vide) reprend les **CC regroupés par département/compagnie** (voir §4.3 pour la clé de regroupement exacte), exactement comme demandé : *« PaxFlow me donne aussi le nombre de personnes par département, les TM au-dessus et les CC en dessous »*.
