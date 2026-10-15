@@ -5,6 +5,8 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { getDb } from "@/lib/db";
 import type { LocalKnownPerson } from "@/lib/db/schema";
 import {
+  findMatriculeConflict,
+  hasHomonyms,
   rememberPerson,
   searchKnownPeople,
   searchKnownPeopleByCompanyId,
@@ -13,6 +15,15 @@ import {
   resolveClassification,
   type Classification,
 } from "@/lib/classification";
+import { KnownPersonStrip } from "./known-person-strip";
+import { MatriculeConflictNotice } from "./matricule-conflict-notice";
+
+const EMPTY_FORM = {
+  name: "",
+  companyIdNumber: "",
+  department: "",
+  companyName: "",
+};
 
 export function PassengerSheet({
   crossingId,
@@ -34,18 +45,22 @@ export function PassengerSheet({
     [crossingId, seatNumber],
   );
 
-  const [form, setForm] = useState({
-    name: "",
-    companyIdNumber: "",
-    department: "",
-    companyName: "",
-  });
+  const [form, setForm] = useState(EMPTY_FORM);
   const { name, companyIdNumber, department, companyName } = form;
   const [manualOverride, setManualOverride] = useState<Classification | null>(
     null,
   );
   const [saving, setSaving] = useState(false);
   const prefilledRef = useRef(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  // The remembered person a save would rename (same matricule, other name).
+  const [conflict, setConflict] = useState<LocalKnownPerson | null>(null);
+  // Set once the AB cancels the homonym strip: this seat's sheet stays in
+  // 100% manual entry (no name/matricule suggestions at all) until closed.
+  const [manualMode, setManualMode] = useState(false);
+  // The strip only appears in response to the AB typing a name — never just
+  // because a sheet for an already-filled seat opened with its name prefilled.
+  const [nameTouched, setNameTouched] = useState(false);
 
   // Prefill once the existing passenger (if any) resolves from Dexie — a
   // single setState call so this doesn't cascade, and a ref guard so it
@@ -69,18 +84,26 @@ export function PassengerSheet({
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   // Mémoire intelligente (§4.5): suggest known people after 2-3 characters.
+  // Looks further than the plain list shows (12 vs 5) so homonyms beyond the
+  // 5 most recent still reach the disambiguation strip. In manual mode
+  // (after "Annuler") nothing is ever suggested.
   useEffect(() => {
     let active = true;
-    searchKnownPeople(userId, name).then((results) => {
+    const lookup = manualMode
+      ? Promise.resolve([] as LocalKnownPerson[])
+      : searchKnownPeople(userId, name, 12);
+    lookup.then((results) => {
       if (active) setSuggestions(results);
     });
     return () => {
       active = false;
     };
-  }, [userId, name]);
+  }, [userId, name, manualMode]);
 
   const [idSuggestions, setIdSuggestions] = useState<LocalKnownPerson[]>([]);
   const [showIdSuggestions, setShowIdSuggestions] = useState(false);
+  // Like nameTouched: the matricule strip only reacts to the AB typing.
+  const [idTouched, setIdTouched] = useState(false);
 
   // Reverse lookup, matricule -> name/department: two TMs never share a
   // Company ID Number (§4.1), so an AB who types the matricule first
@@ -89,15 +112,19 @@ export function PassengerSheet({
   // matricule to search by.
   useEffect(() => {
     let active = true;
-    searchKnownPeopleByCompanyId(userId, companyIdNumber).then((results) => {
+    const lookup = manualMode
+      ? Promise.resolve([] as LocalKnownPerson[])
+      : searchKnownPeopleByCompanyId(userId, companyIdNumber, 12);
+    lookup.then((results) => {
       if (active) setIdSuggestions(results);
     });
     return () => {
       active = false;
     };
-  }, [userId, companyIdNumber]);
+  }, [userId, companyIdNumber, manualMode]);
 
   function selectSuggestion(person: LocalKnownPerson) {
+    setConflict(null);
     setForm({
       name: person.name,
       companyIdNumber: person.company_id_number ?? "",
@@ -108,11 +135,38 @@ export function PassengerSheet({
     setShowIdSuggestions(false);
   }
 
+  // "Annuler" on the homonym strip: nothing from memory is applied, and
+  // this seat goes to 100% manual entry — every field starts from zero and
+  // the TM/CC classification is computed from whatever gets typed, as usual.
+  function cancelSuggestions() {
+    setConflict(null);
+    setForm(EMPTY_FORM);
+    setManualOverride(null);
+    setManualMode(true);
+    setShowSuggestions(false);
+    setShowIdSuggestions(false);
+    nameInputRef.current?.focus();
+  }
+
   function setName(value: string) {
+    setConflict(null); // a pending warning is stale once the form changes
     setForm((f) => ({ ...f, name: value }));
+    setNameTouched(true);
     setShowSuggestions(true);
   }
+
+  const homonymStrip =
+    !manualMode && nameTouched && showSuggestions && hasHomonyms(suggestions);
+
+  // A matricule is supposed to identify one person (§4.1), so two or more
+  // known entries carrying the same one means a past entry error. Never pick
+  // one silently (nothing is ever prefilled until the AB taps a card): show
+  // them all in the same disambiguation strip as name homonyms.
+  const idStrip =
+    !manualMode && idTouched && showIdSuggestions && idSuggestions.length >= 2;
+
   function setCompanyIdNumber(value: string) {
+    setConflict(null);
     setForm((f) => ({ ...f, companyIdNumber: value }));
   }
   function setDepartment(value: string) {
@@ -127,11 +181,31 @@ export function PassengerSheet({
     manualOverride,
   );
 
+  // Save is never blocked, but a matricule already remembered under a
+  // DIFFERENT name gets a one-tap check first, so a typo'd matricule can't
+  // silently rename someone else's memory (§4.5). Confirmer saves; Annuler
+  // returns to the form to fix the matricule.
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
     setSaving(true);
 
+    const clash = await findMatriculeConflict(userId, companyIdNumber, name);
+    if (clash) {
+      setConflict(clash);
+      setSaving(false);
+      return;
+    }
+    await persist();
+  }
+
+  function cancelReplace() {
+    setConflict(null);
+    document.getElementById("companyIdNumber")?.focus();
+  }
+
+  async function persist() {
+    setSaving(true);
     const now = new Date().toISOString();
     await getDb().passengers.put({
       id: existing?.id ?? crypto.randomUUID(),
@@ -202,15 +276,31 @@ export function PassengerSheet({
               required
               autoFocus
               autoComplete="off"
+              ref={nameInputRef}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              onFocus={() => setShowSuggestions(true)}
-              onBlur={() => setShowSuggestions(false)}
+              onFocus={() => {
+                setShowSuggestions(true);
+                setShowIdSuggestions(false);
+              }}
+              // While the strip is up it must survive the input losing focus
+              // (the AB scrolls/taps the strip); it goes away on pick,
+              // "Annuler", or when another field takes focus (below).
+              onBlur={() => {
+                if (!homonymStrip) setShowSuggestions(false);
+              }}
               className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-base dark:border-zinc-700 dark:bg-zinc-800"
             />
-            {showSuggestions && suggestions.length > 0 && (
+            {homonymStrip && (
+              <KnownPersonStrip
+                people={suggestions}
+                onSelect={selectSuggestion}
+                onCancel={cancelSuggestions}
+              />
+            )}
+            {!manualMode && !homonymStrip && showSuggestions && suggestions.length > 0 && (
               <ul className="absolute z-10 mt-1 w-full rounded-md border border-zinc-300 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-800">
-                {suggestions.map((person) => (
+                {suggestions.slice(0, 5).map((person) => (
                   <li key={person.id}>
                     <button
                       type="button"
@@ -255,16 +345,33 @@ export function PassengerSheet({
                 // department here instead (§4.1's classification rule
                 // depends on this field only ever holding a matricule).
                 setCompanyIdNumber(e.target.value.replace(/\D/g, ""));
+                setIdTouched(true);
                 setShowIdSuggestions(true);
               }}
-              onFocus={() => setShowIdSuggestions(true)}
-              onBlur={() => setShowIdSuggestions(false)}
+              onFocus={() => {
+                setShowSuggestions(false);
+                setShowIdSuggestions(true);
+              }}
+              // Same rule as the name field: the strip survives blur (the AB
+              // scrolls/taps it) and goes away on pick, "Annuler", or when
+              // another field takes focus.
+              onBlur={() => {
+                if (!idStrip) setShowIdSuggestions(false);
+              }}
               placeholder="blank for Director/Manager/new joiner"
               className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-base dark:border-zinc-700 dark:bg-zinc-800"
             />
-            {showIdSuggestions && idSuggestions.length > 0 && (
+            {idStrip && (
+              <KnownPersonStrip
+                title="Several people are saved with this ID — pick one"
+                people={idSuggestions}
+                onSelect={selectSuggestion}
+                onCancel={cancelSuggestions}
+              />
+            )}
+            {!manualMode && !idStrip && showIdSuggestions && idSuggestions.length > 0 && (
               <ul className="absolute z-10 mt-1 w-full rounded-md border border-zinc-300 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-800">
-                {idSuggestions.map((person) => (
+                {idSuggestions.slice(0, 5).map((person) => (
                   <li key={person.id}>
                     <button
                       type="button"
@@ -299,6 +406,10 @@ export function PassengerSheet({
                 type="text"
                 pattern="[A-Za-z\s]*"
                 value={department}
+                onFocus={() => {
+                  setShowSuggestions(false);
+                  setShowIdSuggestions(false);
+                }}
                 onChange={(e) =>
                   // Letters only — prevents accidentally typing the
                   // matricule here instead of in Company ID Number.
@@ -319,6 +430,10 @@ export function PassengerSheet({
                 id="companyName"
                 type="text"
                 value={companyName}
+                onFocus={() => {
+                  setShowSuggestions(false);
+                  setShowIdSuggestions(false);
+                }}
                 onChange={(e) => setCompanyName(e.target.value)}
                 placeholder="e.g. UHS, Valet"
                 className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-base dark:border-zinc-700 dark:bg-zinc-800"
@@ -361,7 +476,16 @@ export function PassengerSheet({
             )}
           </div>
 
-          <div className="flex gap-2 pt-2">
+          {conflict && (
+            <MatriculeConflictNotice
+              oldName={conflict.name}
+              newName={name.trim()}
+              onConfirm={persist}
+              onCancel={cancelReplace}
+            />
+          )}
+
+          <div className={`flex gap-2 pt-2 ${conflict ? "hidden" : ""}`}>
             {existing && (
               <button
                 type="button"

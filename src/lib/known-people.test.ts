@@ -2,6 +2,8 @@ import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getDb, PaxFlowDB } from "./db";
 import {
+  findMatriculeConflict,
+  hasHomonyms,
   rememberPerson,
   searchKnownPeople,
   searchKnownPeopleByCompanyId,
@@ -141,6 +143,57 @@ describe("known-people (§4.5)", () => {
     expect(withId?.department).toBe("ENG");
   });
 
+  describe("findMatriculeConflict", () => {
+    const malik = { name: "Malik", companyIdNumber: "1111", department: "ENG", companyName: null };
+
+    it("returns the remembered person a save under another name would rename", async () => {
+      await rememberPerson("u1", malik);
+      const clash = await findMatriculeConflict("u1", "1111", "Zed");
+      expect(clash?.name).toBe("Malik");
+    });
+
+    it("returns null for the same name (case/padding aside), no matricule, or an unknown matricule", async () => {
+      await rememberPerson("u1", malik);
+      expect(await findMatriculeConflict("u1", "1111", "  malik ")).toBeNull();
+      expect(await findMatriculeConflict("u1", "", "Zed")).toBeNull();
+      expect(await findMatriculeConflict("u1", null, "Zed")).toBeNull();
+      expect(await findMatriculeConflict("u1", "2222", "Zed")).toBeNull();
+      expect(await findMatriculeConflict("u1", "1111", "   ")).toBeNull();
+    });
+
+    it("never sees another owner's remembered people (strictly private)", async () => {
+      await rememberPerson("u1", malik);
+      expect(await findMatriculeConflict("u2", "1111", "Zed")).toBeNull();
+    });
+
+    it("flags exactly the row rememberPerson would overwrite", async () => {
+      await rememberPerson("u1", malik);
+      const clash = await findMatriculeConflict("u1", "1111", "Zed");
+      await rememberPerson("u1", { ...malik, name: "Zed" });
+      const all = await getDb().known_people.where("owner_id").equals("u1").toArray();
+      expect(all).toHaveLength(1);
+      expect(all[0].id).toBe(clash?.id);
+      expect(all[0].name).toBe("Zed");
+    });
+  });
+
+  describe("hasHomonyms", () => {
+    it("is true when two people share a name, whatever the case or padding", () => {
+      expect(hasHomonyms([{ name: "Malik" }, { name: "Sofia" }, { name: " malik " }])).toBe(true);
+    });
+
+    it("is false when every name is distinct (even if one contains another)", () => {
+      expect(hasHomonyms([{ name: "Malik" }, { name: "Malika" }])).toBe(false);
+      expect(hasHomonyms([])).toBe(false);
+    });
+
+    it("sees a TM and a CC with the same name as homonyms", async () => {
+      await rememberPerson("u1", { name: "Malik", companyIdNumber: "1111", department: "ENG", companyName: null });
+      await rememberPerson("u1", { name: "Malik", companyIdNumber: null, department: null, companyName: "Valet" });
+      expect(hasHomonyms(await searchKnownPeople("u1", "malik"))).toBe(true);
+    });
+  });
+
   describe("searchKnownPeopleByCompanyId (reverse lookup, TM-only)", () => {
     it("finds the exact matricule match", async () => {
       await rememberPerson("u1", {
@@ -153,6 +206,26 @@ describe("known-people (§4.5)", () => {
       expect(results).toHaveLength(1);
       expect(results[0].name).toBe("Malik");
       expect(results[0].department).toBe("ENG");
+    });
+
+    it("returns EVERY entry sharing a matricule (a past entry error), never just one", async () => {
+      // rememberPerson merges by matricule on one device, but two devices (or
+      // old data) can leave two rows with the same matricule and different
+      // names — the sheet must be able to show both, not pick one.
+      const db = getDb();
+      const base = {
+        owner_id: "u1",
+        company_id_number: "9999",
+        company_name: null,
+        created_at: "2026-10-01T00:00:00Z",
+        sync_status: "synced" as const,
+        sync_error: null,
+      };
+      await db.known_people.put({ ...base, id: "a", name: "Malik", department: "ENG", last_used_at: "2026-10-02T00:00:00Z" });
+      await db.known_people.put({ ...base, id: "b", name: "Sofia", department: "FNB", last_used_at: "2026-10-03T00:00:00Z" });
+
+      const results = await searchKnownPeopleByCompanyId("u1", "9999");
+      expect(results.map((p) => p.name)).toEqual(["Sofia", "Malik"]);
     });
 
     it("requires an exact match, not a substring", async () => {

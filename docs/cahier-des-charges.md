@@ -48,7 +48,7 @@ Permettre à un AB de saisir une seule fois les informations d'une traversée et
 - Génération du manifeste par IA générative (interdit, voir §9.1 — le rendu doit être déterministe).
 - Signature électronique, validation réglementaire officielle, intégration à un système compagnie existant.
 - Notifications push.
-- Conservation des données au-delà de 24 heures (purge automatique, voir §15).
+- Conservation des données au-delà de 14 jours (purge automatique, voir §15).
 
 **Note :** contrairement à une V1 "cloud-only" initialement envisagée, le fonctionnement **hors-ligne est désormais un objectif V1 indispensable** (voir §16.6/16.7) — ce n'est plus une exclusion.
 
@@ -80,7 +80,7 @@ Permettre à un AB de saisir une seule fois les informations d'une traversée et
 9. **UC9 — Consulter l'historique.** L'AB retrouve ses traversées passées ; recherche par date/BIRD.
 10. **UC10 — Admin : superviser.** Consultation en lecture des manifestes et historiques, sans droit de modification.
 11. **UC11 — Super Admin : administrer.** Gestion des comptes, rôles, bateaux, paramètres système.
-12. **UC12 — Réinitialiser ses données.** L'utilisateur peut réinitialiser manuellement et intégralement ses données (traversées ET mémoire intelligente), via une action de confirmation explicite dans son profil (voir §4.7). Indépendant de la purge automatique à 24 heures, qui ne concerne que les traversées (§15.1).
+12. **UC12 — Réinitialiser ses données.** L'utilisateur peut réinitialiser manuellement et intégralement ses données (traversées ET mémoire intelligente), via une action de confirmation explicite dans son profil (voir §4.7). Indépendant de la purge automatique à 14 jours, qui ne concerne que les traversées (§15.1).
 
 ---
 
@@ -129,8 +129,10 @@ Pour rendre cette règle fiable sans recourir à une case dédiée ni à une dé
 - Dès qu'un passager est enregistré avec succès dans une traversée, ses informations (nom, matricule, département, compagnie externe) sont retenues dans une table de « personnes connues » associée à l'utilisateur qui les a saisies.
 - Lors d'une nouvelle saisie, dès que l'AB tape 2-3 caractères d'un nom, l'app propose les correspondances issues des personnes connues, avec préremplissage des autres champs (matricule, département, compagnie) que l'AB peut librement modifier.
 - Le même principe s'applique à l'équipage (Captain, Mechanic, AB, Marine Hostess) : mémorisation des noms déjà saisis pour suggestion future.
-- **Confirmé : la mémoire est strictement privée par compte AB.** Chaque utilisateur ne voit que les personnes qu'il a lui-même déjà enregistrées. Pas de mémoire partagée entre AB en V1.
-- **Confirmé : cette mémoire n'est PAS soumise à la purge des 24 heures** (voir §15.1) — elle persiste indéfiniment, sauf réinitialisation manuelle explicite par l'utilisateur (voir §4.7).
+- **Homonymes (2026-10-15)** : quand plusieurs personnes connues partagent le même nom (TM et/ou CC mélangés), les correspondances s'affichent sous forme de **bande défilante horizontale** de cartes (nom, matricule, département/compagnie, TM/CC) — pas une liste déroulante. Un bouton **« Annuler »**, épinglé dans la bande, n'applique aucune suggestion et fait repasser la fiche passager en **saisie 100 % manuelle** : nom, matricule, département et compagnie repartent de zéro, plus aucune suggestion n'est proposée pour cette fiche, et la classification TM/CC est recalculée normalement à partir des champs saisis. Sans homonyme, la liste de suggestions simple est conservée.
+- **Matricule déjà connu (2026-10-15)** : la même bande s'affiche quand l'AB tape un matricule porté par plusieurs entrées connues (erreur de saisie passée) — jamais de sélection silencieuse, rien n'est prérempli avant le choix de l'AB. Et à l'enregistrement, si le matricule saisi est déjà mémorisé **sur cet appareil** sous un **autre nom**, une confirmation légère s'affiche à la place du bouton Enregistrer : « Ce matricule est déjà associé à <ancien nom> — remplacer par <nouveau nom> ? » — **Confirmer** enregistre le passager et remplace le nom mémorisé ; **Annuler** n'enregistre rien, l'ancien nom reste associé au matricule et l'AB reprend la saisie (corriger le matricule ou en utiliser un autre). Un seul tap dans les deux cas, jamais bloquant ; pas de confirmation si le nom est identique, si le matricule est vide ou inconnu.
+- **Confirmé : la mémoire est strictement privée par compte AB.** Chaque utilisateur ne voit que les personnes qu'il a lui-même déjà enregistrées. Pas de mémoire partagée entre AB en V1. Vérifié le 2026-10-15 par `scripts/test-data-isolation.mjs` (lectures non filtrées, UPDATE/DELETE/INSERT forcés par un autre compte, y compris admin) ; le journal d'audit ne recopie plus le nom des personnes supprimées (migration `20261015101000_audit_known_no_names.sql`).
+- **Confirmé : cette mémoire n'est PAS soumise à la purge des 14 jours** (voir §15.1) — elle persiste indéfiniment, sauf réinitialisation manuelle explicite par l'utilisateur (voir §4.7).
 
 ### 4.6 Correction et immutabilité
 - Un manifeste peut être modifié par son créateur tant qu'il n'est pas explicitement « finalisé/verrouillé » (proposition : un statut `draft` → `finalized`).
@@ -138,10 +140,10 @@ Pour rendre cette règle fiable sans recourir à une case dédiée ni à une dé
 
 ### 4.7 Suppression et réinitialisation manuelle des données — **révisé (2026-08-20) : trois niveaux distincts, implémentés**
 
-En complément de la purge automatique à 24 heures (§15.1, qui ne concerne que les traversées), l'utilisateur dispose de **trois actions de suppression manuelle bien distinctes et clairement libellées**, pour ne jamais confondre "je veux effacer cette traversée" avec "je veux tout effacer y compris ma mémoire" :
+En complément de la purge automatique à 14 jours (§15.1, qui ne concerne que les traversées), l'utilisateur dispose de **trois actions de suppression manuelle bien distinctes et clairement libellées**, pour ne jamais confondre "je veux effacer cette traversée" avec "je veux tout effacer y compris ma mémoire" :
 
 1. **Suppression d'une traversée individuelle** (écran Historique, §11 écran 11) : bouton "Delete" sur chaque traversée, confirmation courte en ligne (Oui/Annuler). Ne touche que cette traversée et ses passagers.
-2. **"Clear my history"** (écran Profil, §11 écran 12) : supprime **toutes** les traversées et passagers de l'utilisateur d'un coup, sans attendre la purge à 24 heures. Ne touche **jamais** `known_people`/`known_crew` — ces deux notions restent indépendantes.
+2. **"Clear my history"** (écran Profil, §11 écran 12) : supprime **toutes** les traversées et passagers de l'utilisateur d'un coup, sans attendre la purge à 14 jours. Ne touche **jamais** `known_people`/`known_crew` — ces deux notions restent indépendantes.
 3. **"Full reset"** (écran Profil) : fait tout ce que fait le point 2, **plus** la mémoire intelligente (`known_people`/`known_crew`). Action irréversible, protégée par une confirmation explicite (saisie du mot "DELETE" — adapté de "SUPPRIMER" pour cohérence avec l'UI en anglais), et journalisée dans `audit_log` via triggers Postgres sur chaque table concernée.
 
 **Suppression sûre hors-ligne** : une suppression déclenchée hors-ligne retire la donnée immédiatement en local (Dexie) et met en file une suppression distante différée (`pending_deletes`, local uniquement) rejouée dès que le réseau revient. Le mécanisme de pull du moteur de sync ignore les identifiants en attente de suppression, pour ne jamais "ressusciter" localement une ligne que l'utilisateur vient de supprimer mais qui existe encore côté serveur au moment du pull.
@@ -398,7 +400,7 @@ crossings (
   ab_name text,                       -- informatif, non comptabilisé
   marine_hostess text,                -- informatif, non comptabilisé
   total_guests int,                   -- optionnel, informatif, non comptabilisé (voir §4.2)
-  expires_at timestamptz not null default (now() + interval '24 hours'),  -- purge automatique, voir §15
+  expires_at timestamptz not null default (now() + interval '14 days'),  -- purge automatique, voir §15
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 )
@@ -419,7 +421,7 @@ passengers (
   unique (crossing_id, seat_number)
 )
 
-known_people (            -- mémoire intelligente, privée par utilisateur (voir §4.5), PAS soumise à la purge 24 heures
+known_people (            -- mémoire intelligente, privée par utilisateur (voir §4.5), PAS soumise à la purge à 14 jours
   id uuid primary key default gen_random_uuid(),
   owner_id uuid references profiles(id) not null,
   name text not null,
@@ -452,7 +454,7 @@ audit_log (
 Notes :
 - `classification_computed` conserve toujours le résultat du moteur de règles ; `classification_final` est ce qui est réellement utilisé (identique sauf override).
 - Les totaux (Total TM, Total CC) ne sont **pas stockés** en colonnes dédiées : ils sont **calculés à la volée** par requête/vue, pour éviter toute désynchronisation. Une vue SQL `crossing_summary` peut être créée pour cela.
-- `expires_at` sur `crossings` est utilisée par une tâche planifiée (voir §15) pour purger automatiquement les traversées de plus de 24 heures ; `passengers` est purgé en cascade via `on delete cascade`.
+- `expires_at` sur `crossings` est utilisée par une tâche planifiée (voir §15) pour purger automatiquement les traversées de plus de 14 jours ; `passengers` est purgé en cascade via `on delete cascade`.
 - Le calcul du moteur de classification (§4.1) doit être **exécuté côté client** (JavaScript pur, sans dépendance réseau) pour fonctionner hors-ligne (voir §16.6), puis simplement synchronisé/persisté tel quel côté serveur — jamais recalculé uniquement côté serveur comme source de vérité unique.
 
 ---
@@ -497,15 +499,15 @@ Cette table n'est pas exposée en écriture directe côté client : elle est ali
 - Les données nominatives (nom, matricule) sont considérées sensibles : pas de log applicatif contenant ces données en clair dans des outils tiers non maîtrisés (ex. pas d'envoi à un service d'analytics externe).
 - Chiffrement : Supabase chiffre les données au repos et en transit par défaut (TLS) ; aucune configuration supplémentaire requise en V1, mais à documenter comme dépendance de la plateforme.
 
-### 15.1 Politique de rétention — **révisé (2026-09-10) : purge automatique à 24 heures, traversées uniquement**
-Confirmé par le porteur de projet : pour limiter le volume stocké (et le coût associé sur Supabase), les données de traversée (`crossings` + `passengers` en cascade) — c'est-à-dire les « fichiers créés » — sont **automatiquement supprimées 24 heures après leur création** (initialement fixé à 30 jours en v1.1, resserré à 24h le 2026-09-10 pour mieux limiter le volume/coût stocké — voir migration `20260910090000_crossings_retention_24h.sql`).
+### 15.1 Politique de rétention — **révisé (2026-10-15) : purge automatique à 14 jours, traversées uniquement**
+Confirmé par le porteur de projet : pour limiter le volume stocké (et le coût associé sur Supabase), les données de traversée (`crossings` + `passengers` en cascade) — c'est-à-dire les « fichiers créés » — sont **automatiquement supprimées 14 jours après leur création** (initialement 30 jours en v1.1, resserré à 24 heures le 2026-09-10 pour limiter le volume/coût stocké, puis fixé à 14 jours le 2026-10-15 — voir migrations `20260910090000_crossings_retention_24h.sql` et `20261015100000_crossings_retention_14d.sql`). Les traversées déjà créées sous la règle des 24 heures conservent leur `expires_at` d'origine ; seules les nouvelles traversées bénéficient des 14 jours.
 
 **Confirmé : cette purge ne s'applique PAS aux détails du personnel** (`known_people`/`known_crew`, la mémoire intelligente). Ces données persistent indéfiniment tant que l'utilisateur ne les réinitialise pas manuellement (voir §4.7).
 
 Mise en œuvre recommandée :
-- Colonne `expires_at` sur `crossings` (voir §12), initialisée à `created_at + 24 heures`. Cette valeur est fixée côté client à la création de la traversée (offline-first, voir §16.7), pas seulement par le défaut de colonne — les deux doivent rester synchronisés.
-- Une tâche planifiée **horaire** (`pg_cron` sur Supabase, ou une Supabase Edge Function déclenchée par un scheduler) supprime les lignes `crossings` dont `expires_at < now()` ; la suppression cascade automatiquement vers `passengers`. `known_people`/`known_crew` ne sont jamais concernés par cette tâche. Fréquence resserrée de quotidienne à horaire le 2026-09-10 (`20260910093000_purge_cron_hourly.sql`) : avec une fenêtre de 24h, un balayage quotidien aurait pu laisser une traversée expirée visible jusqu'à ~48h effectives, à l'encontre de l'objectif de limiter le volume stocké.
-- L'historique (UC9, écran §11.11) ne montrera donc que les dernières 24 heures de traversées — ce point doit être communiqué clairement à l'utilisateur dans l'UI (ex. bandeau "historique conservé 24 heures").
+- Colonne `expires_at` sur `crossings` (voir §12), initialisée à `created_at + 14 jours` (constante unique côté client : `src/lib/retention.ts`). Cette valeur est fixée côté client à la création de la traversée (offline-first, voir §16.7), pas seulement par le défaut de colonne — les deux doivent rester synchronisés.
+- Une tâche planifiée **horaire** (`pg_cron` sur Supabase, ou une Supabase Edge Function déclenchée par un scheduler) supprime les lignes `crossings` dont `expires_at < now()` ; la suppression cascade automatiquement vers `passengers`. `known_people`/`known_crew` ne sont jamais concernés par cette tâche. Fréquence resserrée de quotidienne à horaire le 2026-09-10 (`20260910093000_purge_cron_hourly.sql`), conservée telle quelle avec la fenêtre de 14 jours.
+- L'historique (UC9, écran §11.11) ne montrera donc que les 14 derniers jours de traversées — ce point doit être communiqué clairement à l'utilisateur dans l'UI (ex. bandeau "historique conservé 14 jours").
 - Une option de **réinitialisation manuelle complète** (y compris de la mémoire intelligente) reste disponible dans le profil utilisateur, voir §4.7.
 
 ---
@@ -592,8 +594,8 @@ Conséquences architecturales :
 - [ ] Un second compte utilisateur ne peut ni voir ni modifier les traversées d'un autre compte (vérifié via tentative directe, pas seulement via l'UI).
 - [ ] Un compte Admin peut consulter mais jamais modifier les données d'un autre utilisateur.
 - [ ] Un changement de rôle n'est possible que par un Super Admin et est journalisé dans `audit_log`.
-- [ ] Une traversée de plus de 24 heures est automatiquement supprimée de la base et n'apparaît plus dans l'historique.
-- [ ] L'historique des traversées de l'utilisateur connecté (sur les dernières 24 heures) est consultable et filtrable au minimum par date.
+- [ ] Une traversée de plus de 14 jours est automatiquement supprimée de la base et n'apparaît plus dans l'historique.
+- [ ] L'historique des traversées de l'utilisateur connecté (sur les dernières 14 jours) est consultable et filtrable au minimum par date.
 
 ---
 
@@ -608,8 +610,8 @@ Conséquences architecturales :
 - Écran de synthèse en direct (TM/CC uniquement).
 - Génération résumé (copier/partager WhatsApp — seule étape nécessitant le réseau).
 - Génération manifeste PDF + image, rendu déterministe côté client, sans logo.
-- Historique personnel de l'utilisateur (dernières 24 heures, purge automatique — voir §15).
-- Mémoire intelligente privée par utilisateur (personnes + équipage), disponible hors-ligne via cache local, non soumise à la purge 24 heures.
+- Historique personnel de l'utilisateur (dernières 14 jours, purge automatique — voir §15).
+- Mémoire intelligente privée par utilisateur (personnes + équipage), disponible hors-ligne via cache local, non soumise à la purge à 14 jours.
 - Audit log des opérations sensibles.
 
 ### V1.1 — améliorations proches
@@ -621,7 +623,7 @@ Conséquences architecturales :
 ### Futur (post-adoption élargie)
 - Gestion dynamique et détaillée des plans de sièges (configuration par bateau en base plutôt que gabarits statiques).
 - Intégration éventuelle avec un système RH/compagnie existant pour préremplir les matricules/départements officiels.
-- Export/statistiques consolidées multi-traversées, multi-bateaux (tableau de bord) — nécessitera de revoir la purge à 24 heures si des statistiques longue durée sont souhaitées.
+- Export/statistiques consolidées multi-traversées, multi-bateaux (tableau de bord) — nécessitera de revoir la purge à 14 jours si des statistiques longue durée sont souhaitées.
 - Éventuelle identité visuelle officielle si le produit est adopté formellement par l'entreprise (ajout du logo, à ce moment-là avec autorisation explicite).
 
 ---
@@ -641,7 +643,7 @@ Conséquences architecturales :
 11. Génération du résumé texte (client-side) + actions Copier/Partager WhatsApp.
 12. Génération du manifeste (template déterministe, rendu PDF/image côté client).
 13. Synchronisation en arrière-plan (Service Worker + Background Sync ou retry simple) vers Supabase, avec indicateur d'état "synchronisé/en attente".
-14. Historique personnel (local + distant fusionnés), purge automatique 24 heures côté serveur (`pg_cron` horaire/Edge Function planifiée).
+14. Historique personnel (local + distant fusionnés), purge automatique 14 jours côté serveur (`pg_cron` horaire/Edge Function planifiée).
 15. Écran Admin (lecture seule globale) et écran Super Admin (gestion utilisateurs/rôles/bateaux).
 16. Mise en place de l'audit log sur l'ensemble des opérations sensibles identifiées en §14.
 17. Passage en environnement de production (projet Supabase prod, déploiement Vercel prod) une fois la V1 validée en usage réel par le porteur de projet.
@@ -655,7 +657,7 @@ Toutes les ambiguïtés identifiées en v1.0 et v1.1 ont été levées par le po
 1. ~~Director/Manager~~ → résolu par la scission `department`/`company_name`, voir §4.1.
 2. ~~BIRD 9/10 — sièges exclus~~ → résolu : aucun blocage, voir §4.4.
 3. ~~Total général du résumé (équipage/guests inclus ?)~~ → résolu : seuls TM+CC comptent, voir §8.1.
-4. ~~Durée de conservation des données~~ → résolu : purge automatique à 24 heures sur les traversées uniquement (30 jours en v1.1, resserré le 2026-09-10), mémoire intelligente conservée indéfiniment, réinitialisation manuelle disponible, voir §15.1 et §4.7.
+4. ~~Durée de conservation des données~~ → résolu : purge automatique à 14 jours sur les traversées uniquement (30 jours en v1.1, 24 heures le 2026-09-10, 14 jours le 2026-10-15), mémoire intelligente conservée indéfiniment, réinitialisation manuelle disponible, voir §15.1 et §4.7.
 5. ~~Connectivité en mer~~ → résolu : offline-first requis dès la V1, voir §16.7.
 6. ~~Mémoire intelligente — portée~~ → résolu : strictement privée par AB, voir §4.5.
 7. ~~Vessel Name~~ → résolu : auto-rempli depuis le BIRD choisi, voir §6.

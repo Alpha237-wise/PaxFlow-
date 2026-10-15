@@ -55,6 +55,47 @@ export async function searchKnownPeopleByCompanyId(
     .slice(0, limit);
 }
 
+// The remembered person that saving `name` under this matricule would
+// silently rename, or null when there's nothing to warn about: no matricule,
+// no remembered entry for it on this device, or the remembered entry already
+// has this name (case/padding aside). Uses the exact same lookup as
+// rememberPerson (owner-scoped, first row with that matricule), so the
+// warning is about precisely the row that call would overwrite. The sheet
+// shows a one-tap confirmation for this (§4.5) — saving itself is never
+// blocked by it beyond that tap.
+export async function findMatriculeConflict(
+  ownerId: string,
+  companyIdNumber: string | null | undefined,
+  name: string,
+): Promise<LocalKnownPerson | null> {
+  const id = companyIdNumber?.trim();
+  const newName = name.trim().toLowerCase();
+  if (!id || !newName) return null;
+
+  const existing = await getDb()
+    .known_people.where("owner_id")
+    .equals(ownerId)
+    .filter((p) => p.company_id_number === id)
+    .first();
+  if (!existing) return null;
+  return existing.name.trim().toLowerCase() === newName ? null : existing;
+}
+
+// True when at least two of these known people share the same name
+// (case-insensitive, trimmed) — homonyms, TM and/or CC mixed (§4.1: two TMs
+// never share a matricule, but different people routinely share a name).
+// The passenger sheet switches from its plain suggestion list to the
+// scrolling disambiguation strip exactly in that case.
+export function hasHomonyms(people: Pick<LocalKnownPerson, "name">[]): boolean {
+  const seen = new Set<string>();
+  for (const p of people) {
+    const key = p.name.trim().toLowerCase();
+    if (seen.has(key)) return true;
+    seen.add(key);
+  }
+  return false;
+}
+
 // Upserts by (owner_id, company_id_number) when there is one, since two TMs
 // never share a matricule (§4.1) — that's the reliable identity for that
 // category. Homonyms (same name, different matricule) must stay as
