@@ -61,6 +61,12 @@ describe("Profile — manifest writing colour selector", () => {
     expect(await getDb().profiles.count()).toBe(0); // viewing changes nothing
   });
 
+  it("previews the colour with the signed-in AB's own name, not an invented one", async () => {
+    await mount();
+    expect(container.textContent).toContain("AB Ann · 06:30");
+    expect(container.textContent).not.toContain("Mohammed");
+  });
+
   it("shows the stored colour for an AB who already chose one", async () => {
     await getDb().profiles.put({ id: "u1", full_name: "Ann", role: "user", manifest_ink: "burgundy" });
     await mount();

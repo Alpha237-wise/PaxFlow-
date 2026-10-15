@@ -22,10 +22,15 @@ const RESET_CONFIRM_WORD = "DELETE";
 function ManifestInkSection({
   userId,
   fullName,
+  displayName,
   role,
 }: {
   userId: string;
   fullName: string | null;
+  // What the sample line shows: the signed-in AB's own name (same fallback
+  // as the Profile header), prefixed "AB" like a real manifest's crew line,
+  // so the preview reads like their real manifest.
+  displayName: string;
   role: string;
 }) {
   const profile = useLiveQuery(() => getDb().profiles.get(userId), [userId]);
@@ -82,7 +87,7 @@ function ManifestInkSection({
         className="mt-3 text-base font-bold"
         style={{ color: MANIFEST_INKS[current].color }}
       >
-        Mohammed Al-Sayed · 06:30
+        {/^AB\s/i.test(displayName) ? displayName : `AB ${displayName}`} · 06:30
       </p>
     </section>
   );
@@ -268,7 +273,12 @@ export function ProfileView({
       </div>
 
       <div className="space-y-3">
-        <ManifestInkSection userId={userId} fullName={fullName} role={role} />
+        <ManifestInkSection
+          userId={userId}
+          fullName={fullName}
+          displayName={fullName || email || "Your name"}
+          role={role}
+        />
         <ClearHistorySection userId={userId} />
         <FullResetSection userId={userId} />
       </div>
