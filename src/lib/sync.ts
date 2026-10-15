@@ -275,7 +275,7 @@ async function pullPassengers(crossingIds: string[]): Promise<void> {
   }
 }
 
-// Mirrors the server-side 24h purge (§15.1) locally, so a device's own
+// Mirrors the server-side purge (14-day retention, §15.1) locally, so a device's own
 // history view honestly reflects the retention window even between syncs.
 // The server-side pg_cron job is the actual source of truth for deletion;
 // this just keeps the local cache from drifting out of sync with it.

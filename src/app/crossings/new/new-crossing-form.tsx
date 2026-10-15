@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getDb } from "@/lib/db";
 import { todayLocalISODate } from "@/lib/date";
+import { crossingExpiresAt } from "@/lib/retention";
 import Link from "next/link";
 
 export function NewCrossingForm({
@@ -79,7 +80,7 @@ export function NewCrossingForm({
       ab_name: null,
       marine_hostess: null,
       total_guests: null,
-      expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      expires_at: crossingExpiresAt(),
       created_at: now,
       updated_at: now,
       sync_status: "pending",

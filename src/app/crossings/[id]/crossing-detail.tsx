@@ -7,6 +7,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { getDb } from "@/lib/db";
 import type { LocalCrossing } from "@/lib/db/schema";
 import { todayLocalISODate } from "@/lib/date";
+import { crossingExpiresAt } from "@/lib/retention";
 import { LAYOUT_CARRIES_GUESTS } from "@/lib/seat-layouts";
 import { SeatMap } from "./seat-map";
 import { CrewGuestsForm } from "./crew-guests-form";
@@ -307,7 +308,7 @@ export function CrossingDetail({ userId }: { userId: string }) {
       ab_name: null,
       marine_hostess: null,
       total_guests: null,
-      expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      expires_at: crossingExpiresAt(),
       created_at: now,
       updated_at: now,
       sync_status: "pending",
