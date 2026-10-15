@@ -320,6 +320,14 @@ Aucune altération possible des données injectées : le template est un gabarit
 
 ---
 
+### 9.7 Couleur d'écriture du manifeste (2026-10-15, v1.20)
+Option **purement esthétique**, par **utilisateur** (réglage du profil AB, pas de la traversée) : la couleur du texte injecté sur le manifeste généré.
+- **3 couleurs** au choix, toutes foncées et peu saturées (contraste ≥ 7:1 sur le fond clair du papier) : **Bleu marine** (`#0a2472`, valeur par défaut, inchangée), **Vert bouteille** (`#0d4a33`), **Bordeaux** (`#6b1428`). Sélecteur à 3 pastilles dans l'écran Profil.
+- **Une seule couleur** pour tout ce qu'écrit un AB donné : aucune distinction TM / CC (les colonnes Department/Company suffisent). Elle s'applique aux **deux gabarits** (51 et 50 sièges), à l'en-tête, aux lignes de sièges et au pied de page.
+- Par défaut (réglage jamais ouvert), bleu marine : rien ne change pour un AB qui n'y touche pas.
+- **Aucun impact** sur la classification TM/CC, les totaux ou toute règle métier.
+- Mise en œuvre : colonne `profiles.manifest_ink` (`navy` | `green` | `burgundy`, défaut `navy`, migration `20261015120000_profiles_manifest_ink.sql`). Écriture **locale d'abord** (fonctionne hors-ligne, effective au prochain rendu), envoi à Supabase en arrière-plan ; un choix pas encore envoyé n'est jamais écrasé par une synchro descendante (§16.7).
+
 ## 10. Workflow cible (résumé)
 
 ```

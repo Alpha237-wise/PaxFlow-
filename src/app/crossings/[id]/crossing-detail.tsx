@@ -197,6 +197,7 @@ export function CrossingDetail({ userId }: { userId: string }) {
     // null (not a default form) until the vessel resolves — see
     // useManifestExport.
     seatLayoutRef: vessel?.seat_layout_ref ?? null,
+    ink: profile?.manifest_ink,
   });
 
   if (result === undefined) {

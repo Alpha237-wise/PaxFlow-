@@ -18,7 +18,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "./supabase/client";
 import { getDb } from "./db";
-import { toLocalVessel, toLocalProfile } from "./db/schema";
+import { toLocalVessel, toLocalProfile, type LocalProfile } from "./db/schema";
+import type { ManifestInk } from "./manifest-ink";
 import { pullManifestTemplate } from "./manifest-template";
 
 // sync_status/sync_error are local-only bookkeeping — Supabase's schema
@@ -190,21 +191,76 @@ async function pullVessels(): Promise<void> {
 
 // Same pattern/reasoning as pullVessels — Home's page.tsx used to fetch
 // this server-side on every load instead of relying on this cache (see
-// LocalProfile's docstring in schema.ts). Read-only: nothing writes to
-// profiles from the client, so no push counterpart is needed.
-async function pullProfile(userId: string): Promise<void> {
+// LocalProfile's docstring in schema.ts). Read-mostly: the only field the
+// client writes back is manifest_ink (see setManifestInk/pushProfileInk).
+export async function pullProfile(userId: string): Promise<void> {
   const db = getDb();
   const supabase = createClient();
   try {
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, full_name, role")
+      .select("id, full_name, role, manifest_ink")
       .eq("id", userId)
       .single();
     if (error || !data) return;
-    await db.profiles.put(toLocalProfile(data));
+    const row = toLocalProfile(data);
+    // A colour picked on this device but not pushed yet wins over whatever
+    // the server still has — otherwise a sync cycle landing between the tap
+    // and the push would silently revert the AB's choice.
+    const local = await db.profiles.get(userId);
+    if (local?.manifest_ink_pending) {
+      row.manifest_ink = local.manifest_ink;
+      row.manifest_ink_pending = true;
+    }
+    await db.profiles.put(row);
   } catch {
     // Network unreachable.
+  }
+}
+
+// Manifest writing colour (§9.7): local first (works offline, takes effect on
+// the very next manifest render), pushed to profiles.manifest_ink in the
+// background. `fallback` seeds the local profile row when this device hasn't
+// pulled it yet, so a choice is never lost for lack of a cached row.
+export async function setManifestInk(
+  userId: string,
+  ink: ManifestInk,
+  fallback?: { full_name: string | null; role: LocalProfile["role"] },
+): Promise<void> {
+  const db = getDb();
+  const local = await db.profiles.get(userId);
+  if (local) {
+    await db.profiles.update(userId, { manifest_ink: ink, manifest_ink_pending: true });
+  } else {
+    await db.profiles.put({
+      id: userId,
+      full_name: fallback?.full_name ?? null,
+      role: fallback?.role ?? "user",
+      manifest_ink: ink,
+      manifest_ink_pending: true,
+    });
+  }
+}
+
+export async function pushProfileInk(userId: string): Promise<void> {
+  const db = getDb();
+  const local = await db.profiles.get(userId);
+  if (!local?.manifest_ink_pending) return;
+  const sent = local.manifest_ink;
+  try {
+    const { error } = await createClient()
+      .from("profiles")
+      .update({ manifest_ink: sent })
+      .eq("id", userId);
+    if (error) return; // stays pending, retried next cycle
+    // Only clear the flag if the AB didn't pick another colour while this
+    // request was in flight.
+    const now = await db.profiles.get(userId);
+    if (now && now.manifest_ink === sent) {
+      await db.profiles.update(userId, { manifest_ink_pending: false });
+    }
+  } catch {
+    // Network unreachable — stays pending.
   }
 }
 
@@ -497,6 +553,7 @@ export async function runSync(userId: string): Promise<void> {
   // the parent row must exist server-side first.
   await runStep("pushCrossings", pushCrossings);
   await runStep("pushPassengers", pushPassengers);
+  await runStep("pushProfileInk", () => pushProfileInk(userId));
   await runStep("pushKnownPeople", pushKnownPeople);
   await runStep("pushKnownCrew", pushKnownCrew);
 

@@ -3,6 +3,12 @@
 // names — so the sync layer (§21 step 13) can read/write rows without a
 // translation layer that could silently drift out of sync.
 
+import {
+  DEFAULT_MANIFEST_INK,
+  isManifestInk,
+  type ManifestInk,
+} from "../manifest-ink";
+
 export type SyncStatus = "synced" | "pending" | "error";
 
 export interface LocalVessel {
@@ -22,11 +28,16 @@ export interface LocalVessel {
 // migration to getSession() for the auth check itself). Read-only from the
 // client: nothing in this app currently lets a user edit their own
 // full_name/role through the UI, so this only ever needs pulling, never
-// pushing.
+// pushing — with ONE exception since 2026-10-15: manifest_ink (the AB's
+// manifest writing colour, §9.7), which is edited from the Profile screen,
+// written locally first (works offline) and pushed in the background while
+// manifest_ink_pending is set. Pulls never overwrite a pending value.
 export interface LocalProfile {
   id: string;
   full_name: string | null;
   role: "user" | "admin" | "super_admin";
+  manifest_ink: ManifestInk;
+  manifest_ink_pending?: boolean;
 }
 
 // Same narrowing need as toLocalVessel — Supabase's generated type for
@@ -35,8 +46,12 @@ export function toLocalProfile(row: {
   id: string;
   full_name: string | null;
   role: string;
+  manifest_ink?: string | null;
 }): LocalProfile {
-  return row as LocalProfile;
+  return {
+    ...row,
+    manifest_ink: isManifestInk(row.manifest_ink) ? row.manifest_ink : DEFAULT_MANIFEST_INK,
+  } as LocalProfile;
 }
 
 // Supabase's generated types widen CHECK-constrained text columns to plain

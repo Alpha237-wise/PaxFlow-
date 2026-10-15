@@ -17,6 +17,7 @@ import {
   type SeatBlockCalibration,
 } from "@/lib/manifest-template-calibration";
 import { getCachedManifestTemplate } from "@/lib/manifest-template";
+import { DEFAULT_MANIFEST_INK, manifestInkColor } from "@/lib/manifest-ink";
 import type { SeatLayoutRef } from "@/lib/seat-layouts";
 
 // Fixed pixel width, independent of the viewport: this element is exported
@@ -43,7 +44,9 @@ const SEAT_NARROW_COLUMN_FONT_SIZE = MANIFEST_WIDTH * (13 / 1100);
 
 // Dark blue, not black — injected data must read as distinct from the
 // form's own printed black text at a glance (2026-09-08 field report).
-const FIELD_TEXT_COLOR = "#0a2472";
+// This is the default (navy) — the AB's own choice (profile, §9.7) overrides
+// it via PhotoOverlayManifest's `ink`.
+const FIELD_TEXT_COLOR = manifestInkColor(DEFAULT_MANIFEST_INK);
 
 // vAlign "line" (default) sits the text's bottom edge on yPct — right for
 // the header/footer fields, calibrated against a printed blank underline
@@ -53,10 +56,15 @@ const FIELD_TEXT_COLOR = "#0a2472";
 // to sit above; using "line" there shifted every field up by ~half a
 // text-line, visible as a doubled/blurred look against the row's own
 // printed seat number (2026-09-07 field report).
-function fieldStyle(
+function baseFieldStyle(
   pos: FieldPosition,
   vAlign: "line" | "middle" = "line",
-  options?: { fontSize?: number; fontWeight?: CSSProperties["fontWeight"]; maxWidthPx?: number },
+  options?: {
+    fontSize?: number;
+    fontWeight?: CSSProperties["fontWeight"];
+    maxWidthPx?: number;
+    color?: string;
+  },
 ): CSSProperties {
   const vPct = vAlign === "middle" ? -50 : -100;
   const base: CSSProperties = {
@@ -66,7 +74,7 @@ function fieldStyle(
     fontSize: options?.fontSize ?? FIELD_FONT_SIZE,
     fontWeight: options?.fontWeight ?? 700,
     lineHeight: 1,
-    color: FIELD_TEXT_COLOR,
+    color: options?.color ?? FIELD_TEXT_COLOR,
     ...(options?.maxWidthPx !== undefined
       ? { maxWidth: options.maxWidthPx, overflow: "hidden", textOverflow: "ellipsis" }
       : null),
@@ -99,11 +107,21 @@ export function PhotoOverlayManifest({
   templateUrl,
   manifest,
   calibration,
+  ink,
 }: {
   templateUrl: string;
   manifest: ManifestData;
   calibration: ManifestCalibration;
+  // The AB's writing colour (profiles.manifest_ink, §9.7). One colour for
+  // every injected value — TM and CC alike. Unknown/missing -> navy.
+  ink?: string | null;
 }) {
+  const color = manifestInkColor(ink);
+  const fieldStyle = (
+    pos: FieldPosition,
+    vAlign: "line" | "middle" = "line",
+    options?: Parameters<typeof baseFieldStyle>[2],
+  ) => baseFieldStyle(pos, vAlign, { ...options, color });
   const { header, footer, leftBlock, rightBlock, leftBlockMaxSeat } = calibration;
   const leftRows = manifest.rows.filter((r) => r.seat <= leftBlockMaxSeat);
   const rightRows = manifest.rows.filter((r) => r.seat > leftBlockMaxSeat);
@@ -323,10 +341,13 @@ export function useManifestExport({
   vesselName,
   crossing,
   seatLayoutRef,
+  ink,
 }: {
   crossingId: string;
   vesselName: string;
   crossing: ManifestCrossingInput;
+  // The signed-in AB's manifest writing colour (§9.7), from their profile.
+  ink?: string | null;
   // null while the vessel (which owns the seat layout) hasn't resolved yet:
   // no template is chosen and exports stay disabled until it does, rather
   // than defaulting to one form and risking the wrong one for a BIRD 9/10
@@ -419,6 +440,7 @@ export function useManifestExport({
     manifest,
     templateUrl: seatLayoutRef ? templateUrl : null,
     calibration: MANIFEST_CALIBRATIONS[layoutForData],
+    ink,
     ready: seatLayoutRef !== null,
     manifestRef,
     busy,
@@ -476,6 +498,7 @@ export function ManifestPreviewSection({
   manifest,
   templateUrl,
   calibration,
+  ink,
   manifestRef,
   busy,
   ready,
@@ -495,6 +518,7 @@ export function ManifestPreviewSection({
               templateUrl={templateUrl}
               manifest={manifest}
               calibration={calibration}
+              ink={ink}
             />
           ) : (
             <CodedTemplateManifest manifest={manifest} calibration={calibration} />
