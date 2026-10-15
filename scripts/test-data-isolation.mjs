@@ -171,6 +171,22 @@ async function main() {
     department: "Marine Ops",
   });
   check("Alice can save a known_people entry", !knownErr, knownErr?.message);
+  const { data: aliceKnownRow } = await alice
+    .from("known_people")
+    .select("id")
+    .eq("name", "Ahmed Al-Sayed")
+    .single();
+  const { error: knownCrewErr } = await alice.from("known_crew").insert({
+    owner_id: aliceId,
+    role: "captain",
+    name: "Captain Isolation-Test",
+  });
+  check("Alice can save a known_crew entry", !knownCrewErr, knownCrewErr?.message);
+  const { data: aliceKnownCrewRow } = await alice
+    .from("known_crew")
+    .select("id")
+    .eq("name", "Captain Isolation-Test")
+    .single();
 
   const [crossing1, crossing2, crossing3] = createdCrossingIds;
 
@@ -228,6 +244,23 @@ async function main() {
 
   const { data: bobSeesKnown } = await bob.from("known_people").select("id").eq("owner_id", aliceId);
   check("Bob's SELECT on Alice's known_people returns 0 rows", (bobSeesKnown ?? []).length === 0);
+
+  // Unfiltered reads: not "WHERE owner_id = alice" (which a buggy policy could
+  // still answer), just "give me everything I'm allowed to see".
+  const { data: bobAllKnown } = await bob.from("known_people").select("id, owner_id");
+  check("Bob's UNFILTERED SELECT on known_people returns nothing of Alice's", (bobAllKnown ?? []).every((r) => r.owner_id !== aliceId) && (bobAllKnown ?? []).length === 0);
+  const { data: bobAllCrew } = await bob.from("known_crew").select("id, owner_id");
+  check("Bob's UNFILTERED SELECT on known_crew returns nothing of Alice's", (bobAllCrew ?? []).length === 0);
+  const { data: bobUpKnown, error: bobUpKnownErr } = await bob.from("known_people").update({ department: "Hijacked" }).eq("id", aliceKnownRow.id).select();
+  check("Bob's UPDATE on Alice's known_people affects 0 rows", !bobUpKnownErr && (bobUpKnown ?? []).length === 0);
+  const { data: bobDelKnown, error: bobDelKnownErr } = await bob.from("known_people").delete().eq("id", aliceKnownRow.id).select();
+  check("Bob's DELETE on Alice's known_people affects 0 rows", !bobDelKnownErr && (bobDelKnown ?? []).length === 0);
+  const { data: knownStill } = await admin.from("known_people").select("id, department").eq("id", aliceKnownRow.id).maybeSingle();
+  check("Alice's known_people row is intact after Bob's attempts", knownStill?.department === "Marine Ops");
+  const { error: bobPlantKnownErr } = await bob.from("known_people").insert({ owner_id: aliceId, name: "Planted By Bob" });
+  check("Bob cannot INSERT a known_people row owned by Alice (WITH CHECK)", !!bobPlantKnownErr, bobPlantKnownErr?.message);
+  const { error: bobPlantCrewErr } = await bob.from("known_crew").insert({ owner_id: aliceId, role: "ab", name: "Planted By Bob" });
+  check("Bob cannot INSERT a known_crew row owned by Alice (WITH CHECK)", !!bobPlantCrewErr, bobPlantCrewErr?.message);
 
   // --- Carla (admin): can read, cannot write ---
   console.log("\n--- Carla (admin) attempts direct queries against Alice's data ---");
@@ -295,6 +328,28 @@ async function main() {
     "Carla (admin) CANNOT SELECT Alice's known_people (strictly private even from Admin, §4.5/§13.2)",
     (carlaSeesKnown ?? []).length === 0,
   );
+
+  const { data: carlaAllKnown } = await carla.from("known_people").select("id");
+  check("Carla (admin) UNFILTERED SELECT on known_people returns nothing", (carlaAllKnown ?? []).length === 0);
+  const { data: carlaAllCrew } = await carla.from("known_crew").select("id");
+  check("Carla (admin) UNFILTERED SELECT on known_crew returns nothing", (carlaAllCrew ?? []).length === 0);
+
+  // --- Audit trail must not copy remembered people's names ---
+  // audit_log is readable by super_admin (policy) and shown on the Super
+  // Admin screen with its metadata, so a data.delete row that carries the
+  // deleted known person's NAME would hand another user's private memory to
+  // a super_admin. Alice deletes her own entries; the resulting audit rows
+  // (read here via the service role) must not contain any name.
+  const { error: aliceDelKnownErr } = await alice.from("known_people").delete().eq("id", aliceKnownRow.id);
+  const { error: aliceDelCrewErr } = await alice.from("known_crew").delete().eq("id", aliceKnownCrewRow.id);
+  check("Alice can delete her own known_people / known_crew entries", !aliceDelKnownErr && !aliceDelCrewErr);
+  const { data: auditRows } = await admin
+    .from("audit_log")
+    .select("target_table, metadata")
+    .in("target_id", [aliceKnownRow.id, aliceKnownCrewRow.id]);
+  check("Deleting known entries is still audited (2 data.delete rows)", (auditRows ?? []).length === 2, `${(auditRows ?? []).length} rows`);
+  const leaked = (auditRows ?? []).filter((r) => JSON.stringify(r.metadata ?? {}).toLowerCase().includes("name") || JSON.stringify(r.metadata ?? {}).includes("Ahmed") || JSON.stringify(r.metadata ?? {}).includes("Isolation-Test"));
+  check("audit_log metadata for known_people/known_crew deletions contains no personal name", leaked.length === 0, leaked.length ? JSON.stringify(leaked.map((r) => r.metadata)) : undefined);
 
   await cleanup(aliceId);
   printSummaryAndExit();
