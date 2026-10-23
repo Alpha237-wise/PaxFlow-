@@ -5,13 +5,7 @@ import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getDb } from "@/lib/db";
 import type { LocalVessel } from "@/lib/db/schema";
-
-// §5.1: BIRD 1..10 must sort numerically, not lexicographically
-// ("BIRD 10" would otherwise land right after "BIRD 1").
-function vesselNumber(name: string): number {
-  const match = /\d+/.exec(name);
-  return match ? Number(match[0]) : Number.POSITIVE_INFINITY;
-}
+import { compareVesselNames } from "@/lib/vessel-order";
 
 export function VesselChooser({
   initialVessels,
@@ -37,9 +31,8 @@ export function VesselChooser({
     initialVessels,
   );
 
-  const sorted = [...(vessels ?? [])].sort(
-    (a, b) => vesselNumber(a.name) - vesselNumber(b.name),
-  );
+  // §5.1: BIRD 1..10 numerically, then the other boats (e.g. ARPM2).
+  const sorted = [...(vessels ?? [])].sort((a, b) => compareVesselNames(a.name, b.name));
 
   return (
     <div className="w-full max-w-sm">

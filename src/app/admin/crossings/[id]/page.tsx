@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { summarizeCrossing } from "@/lib/crossing-summary";
 import { buildManifestData } from "@/lib/manifest";
 import { toPassengerRow } from "@/lib/db/schema";
+import type { SeatLayoutRef } from "@/lib/seat-layouts";
 
 export default async function AdminCrossingPage({
   params,
@@ -54,7 +55,7 @@ export default async function AdminCrossingPage({
   const vesselLabel =
     crossing.vessel_name_override || crossing.vessels?.name || "—";
   const seatLayoutRef =
-    (crossing.vessels?.seat_layout_ref as "51-seats" | "50-seats" | undefined) ??
+    (crossing.vessels?.seat_layout_ref as SeatLayoutRef | undefined) ??
     "51-seats";
   const manifest = buildManifestData(
     crossing,

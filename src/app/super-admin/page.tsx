@@ -4,13 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { MANIFEST_TEMPLATE_BUCKET, MANIFEST_TEMPLATES } from "@/lib/manifest-template";
 import type { SeatLayoutRef } from "@/lib/seat-layouts";
+import { compareVesselNames } from "@/lib/vessel-order";
 import { updateUserRole, updateVesselStatus } from "./actions";
 import { ManifestTemplateUpload } from "./manifest-template-upload";
-
-function vesselNumber(name: string): number {
-  const match = /\d+/.exec(name);
-  return match ? Number(match[0]) : Number.POSITIVE_INFINITY;
-}
 
 export default async function SuperAdminPage() {
   const supabase = await createClient();
@@ -48,7 +44,7 @@ export default async function SuperAdminPage() {
   const { data: vessels } = await supabase.from("vessels").select("*");
   const sortedVessels = (vessels ?? [])
     .slice()
-    .sort((a, b) => vesselNumber(a.name) - vesselNumber(b.name));
+    .sort((a, b) => compareVesselNames(a.name, b.name));
 
   const { data: auditLog } = await supabase
     .from("audit_log")
@@ -76,6 +72,7 @@ export default async function SuperAdminPage() {
   }
   const template51 = await loadManifestTemplate("51-seats");
   const template50 = await loadManifestTemplate("50-seats");
+  const template45 = await loadManifestTemplate("45-seats");
 
   return (
     <div className="flex flex-1 flex-col items-center bg-zinc-50 px-6 py-8 dark:bg-black">
@@ -184,6 +181,14 @@ export default async function SuperAdminPage() {
           title="Manifest template — BIRD 9-10 (50 seats)"
           currentPreviewUrl={template50.previewUrl}
           currentUpdatedAt={template50.updatedAt}
+        />
+
+        <ManifestTemplateUpload
+          userId={user.id}
+          layoutRef="45-seats"
+          title="Manifest template — ARPM2 / A2 (45 seats)"
+          currentPreviewUrl={template45.previewUrl}
+          currentUpdatedAt={template45.updatedAt}
         />
 
         <section className="space-y-2">

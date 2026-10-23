@@ -121,7 +121,7 @@ Pour rendre cette règle fiable sans recourir à une case dédiée ni à une dé
 
 ### 4.4 Sièges et capacité — **révisé (v1.1) : aucun blocage**
 - Chaque BIRD a un plan de sièges fixe (voir §5 pour le détail visuel tiré du document).
-- BIRD 1 à BIRD 8 : 51 sièges. BIRD 9 et BIRD 10 : 50 sièges.
+- BIRD 1 à BIRD 8 : 51 sièges. BIRD 9 et BIRD 10 : 50 sièges. **ARPM2 (« A2 », ajouté 2026-10-22) : 45 sièges** — premier bateau hors convention « BIRD n » (le nom est du texte libre ; l'ordre d'affichage est `src/lib/vessel-order.ts` : BIRD 1…10 numériquement, puis les autres noms par ordre alphabétique).
 - Confirmé par le porteur de projet : dans la pratique, une traversée remplit toujours moins de 51 places, donc **aucune limite de capacité n'est appliquée ni bloquée** dans l'application — pas de distinction "capacité opérationnelle" à 48 pour BIRD 9/10, pas de sièges désignés comme indisponibles.
 - Le sélecteur de bateau **propose les 10 BIRD** ; l'AB choisit librement celui utilisé. Le statut « hors service » (ex. BIRD 10 en réparation) reste une information disponible mais n'empêche plus la sélection — un simple badge visuel d'avertissement suffit (l'AB reste en pratique le mieux placé pour savoir quel bateau il utilise réellement).
 
@@ -173,7 +173,9 @@ Total : 18 + 15 + 18 = 51 sièges. C'est ce layout qui sert de gabarit visuel au
 
 Total : 23 + 27 = 50 sièges. Les rangées de largeurs différentes sont centrées dans leur bloc.
 
-**Gabarit de manifeste par bateau (2026-10-14)** : le formulaire papier de BIRD 9/10 diffère de celui de BIRD 1-8 ; chaque bateau utilise automatiquement le sien, choisi uniquement par `vessels.seat_layout_ref` (BIRD 1-8 → image et calibration « 51 sièges », BIRD 9/10 → « 50 sièges »). Les deux images sont stockées séparément (`manifest_template`, une ligne par gabarit) ; si l'image d'un gabarit n'est pas encore en cache, l'écran retombe sur la reconstruction codée, **jamais sur l'image de l'autre gabarit**.
+**Gabarit `45-seats` (ARPM2 / A2) : confirmé (2026-10-22) à partir de la photo réelle du papier (`reference/manifest A2.jpg`)**. Plan imprimé en **3 blocs de 15 sièges** : gauche = siège isolé [1] puis 7 paires ([2,3] à [14,15]) ; centre = 5 triplets ([16,17,18] à [28,29,30]) ; droite = siège isolé [31] puis 7 paires ([32,33] à [44,45]). Les listes imprimées sont découpées 1-23 (gauche) / 24-45 (droite). **Contrairement au gabarit 50 sièges, ce papier imprime « Total No. of Guest »** : ARPM2 transporte donc des guests (champ de saisie, ligne manifeste et ligne WhatsApp `<n>guests` présents).
+
+**Gabarit de manifeste par bateau (2026-10-14, étendu à 3 gabarits le 2026-10-22)** : le formulaire papier de BIRD 9/10 diffère de celui de BIRD 1-8 ; chaque bateau utilise automatiquement le sien, choisi uniquement par `vessels.seat_layout_ref` (BIRD 1-8 → image et calibration « 51 sièges », BIRD 9/10 → « 50 sièges », ARPM2 → « 45 sièges »). Les trois images sont stockées séparément (`manifest_template`, une ligne par gabarit) ; si l'image d'un gabarit n'est pas encore en cache, l'écran retombe sur la reconstruction codée, **jamais sur l'image de l'autre gabarit**.
 
 ### 5.1 Modèle de données proposé pour la flotte
 ```
@@ -182,7 +184,7 @@ vessels
   name              -- "BIRD 1" ... "BIRD 10"
   total_seats        -- 51 ou 50 (informatif, aucun blocage appliqué — voir §4.4)
   status              -- 'active' | 'out_of_service' (informatif, badge uniquement, ne bloque pas la sélection)
-  seat_layout_ref     -- référence au gabarit de plan (V1 : 2 gabarits, "51-seats" et "50-seats")
+  seat_layout_ref     -- référence au gabarit de plan (3 gabarits : "51-seats", "50-seats", "45-seats")
   created_at / updated_at
 ```
 - Le plan de sièges lui-même (positions x/y, regroupements visuels) est stocké comme configuration statique côté frontend en V1 (2 gabarits : 51 places, 50 places), et non recréé dynamiquement en base — cela évite une complexité inutile pour un nombre de configurations aussi limité (10 bateaux, 2 gabarits). Une évolution future pourrait déplacer ce gabarit en base si la flotte diversifie ses configurations.
@@ -302,7 +304,7 @@ Rendu **déterministe** : un template fixe dans lequel les données saisies sont
 Le porteur de projet a fourni une photo du formulaire papier **vierge** (`docs/reference/seat-plan-blank-manifest.jpg`) et demandé une reproduction fidèle de sa mise en page, dans le but explicite de remplacer complètement la photo du papier rempli à la main comme pièce jointe WhatsApp. Ceci **remplace** la version précédente de cette section (tableau "dynamique" limité aux passagers saisis, et Captain/Mechanic/AB absents du document) :
 
 - **En-tête traversée**, disposé en 2 colonnes × 3 lignes comme sur le papier : (Date, Vessel Name), (Time of Departure, Time of Arrival), (Part of Origin, Destination).
-- **Tableau des sièges complet, en DEUX blocs côte à côte** (pas un seul tableau vertical) : bloc gauche = sièges 1 à 25, bloc droit = sièges 26 à la fin (51 pour BIRD 1-8, 50 pour BIRD 9/10) — reproduit la disposition physique du papier. **Toutes les lignes sont affichées**, y compris les sièges non occupés (lignes vides) — ce n'est plus un tableau dynamique limité aux passagers réellement saisis. Colonnes par bloc : Seat / Name / Company ID Number / Department ou Department+Company selon TM/CC.
+- **Tableau des sièges complet, en DEUX blocs côte à côte** (pas un seul tableau vertical) : bloc gauche = sièges 1 à 25, bloc droit = sièges 26 à la fin (51 pour BIRD 1-8, 50 pour BIRD 9/10) — **sauf ARPM2 : 1-23 / 24-45** — reproduit la disposition physique du papier. **Toutes les lignes sont affichées**, y compris les sièges non occupés (lignes vides) — ce n'est plus un tableau dynamique limité aux passagers réellement saisis. Colonnes par bloc : Seat / Name / Company ID Number / Department ou Department+Company selon TM/CC.
 - **Bloc équipage et totaux en bas**, avec les valeurs réellement saisies : Captain on board, Mechanic, AB, Marine Hostess, Total No. of TM, Total No. of Guest, Total No. of Contractors No. (= total CC). **Exception BIRD 9/10 (confirmé 2026-10-14)** : le papier de ces bateaux n'imprime pas « Total No. of Guest » — aucun guest n'est transporté sur BIRD 9 et 10 — le champ est donc absent du manifeste (les autres lignes du pied de page, dont Total No. of TM et Total No. of Contractors No., sont inchangées). Ceci **annule** la précédente décision qui excluait Captain/Mechanic/AB du document généré (ils n'étaient utilisés que pour le résumé WhatsApp) — ils apparaissent désormais aussi sur le manifeste.
 - **Non inclus** (confirmé, inchangé) : la grille de codes/cases à cocher visible en haut à droite sur l'exemple papier rempli (usage interne de l'AB, sans lien avec les règles métier de PaxFlow).
 - **Optionnel/bonus, non bloquant** : le petit diagramme de position des sièges (grille de cases numérotées, §5) visible en bas à droite du papier — peut être ajouté plus tard si le temps le permet, ne bloque pas la V1 de cet écran.
@@ -323,7 +325,7 @@ Aucune altération possible des données injectées : le template est un gabarit
 ### 9.7 Couleur d'écriture du manifeste (2026-10-15, v1.20)
 Option **purement esthétique**, par **utilisateur** (réglage du profil AB, pas de la traversée) : la couleur du texte injecté sur le manifeste généré.
 - **3 couleurs** au choix, toutes foncées et peu saturées (contraste ≥ 7:1 sur le fond clair du papier) : **Bleu marine** (`#0a2472`, valeur par défaut, inchangée), **Vert bouteille** (`#0d4a33`), **Bordeaux** (`#6b1428`). Sélecteur à 3 pastilles dans l'écran Profil.
-- **Une seule couleur** pour tout ce qu'écrit un AB donné : aucune distinction TM / CC (les colonnes Department/Company suffisent). Elle s'applique aux **deux gabarits** (51 et 50 sièges), à l'en-tête, aux lignes de sièges et au pied de page.
+- **Une seule couleur** pour tout ce qu'écrit un AB donné : aucune distinction TM / CC (les colonnes Department/Company suffisent). Elle s'applique aux **trois gabarits** (51, 50 et 45 sièges), à l'en-tête, aux lignes de sièges et au pied de page.
 - Par défaut (réglage jamais ouvert), bleu marine : rien ne change pour un AB qui n'y touche pas.
 - **Aucun impact** sur la classification TM/CC, les totaux ou toute règle métier.
 - Mise en œuvre : colonne `profiles.manifest_ink` (`navy` | `green` | `burgundy`, défaut `navy`, migration `20261015120000_profiles_manifest_ink.sql`). Écriture **locale d'abord** (fonctionne hors-ligne, effective au prochain rendu), envoi à Supabase en arrière-plan ; un choix pas encore envoyé n'est jamais écrasé par une synchro descendante (§16.7).
@@ -385,7 +387,7 @@ vessels (
   name text not null unique,          -- "BIRD 1" ... "BIRD 10"
   total_seats int not null,
   status text not null default 'active' check (status in ('active','out_of_service')),
-  seat_layout_ref text not null,      -- '51-seats' | '50-seats'
+  seat_layout_ref text not null,      -- '51-seats' | '50-seats' | '45-seats'
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 )

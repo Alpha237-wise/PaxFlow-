@@ -28,7 +28,7 @@ Prototype personnel : PWA offline-first pour un AB (Able Seaman) qui saisit les 
 
 **Manifeste et résumé — rendu déterministe uniquement (§9.1/§9.5)** :
 - Jamais de génération via un LLM pour le manifeste ou le résumé. Template fixe + données injectées telles quelles, sans reformulation.
-- Manifeste : réplique fidèle de la mise en page papier vierge (révisé 2026-08-20, §9.2) — tableau des sièges **complet en 2 blocs côte à côte** (1-25 / 26-fin, lignes vides incluses), bloc équipage+totaux en bas (Captain/Mechanic/AB/MH + Total TM/Guest/Contractors — pas de Guest sur BIRD 9/10, gabarit papier distinct 50 sièges), toujours pas de logo d'entreprise.
+- Manifeste : réplique fidèle de la mise en page papier vierge (révisé 2026-08-20, §9.2) — tableau des sièges **complet en 2 blocs côte à côte** (1-25 / 26-fin, lignes vides incluses), bloc équipage+totaux en bas (Captain/Mechanic/AB/MH + Total TM/Guest/Contractors — pas de Guest sur BIRD 9/10, gabarit papier distinct 50 sièges ; ARPM2 = 3ᵉ gabarit 45 sièges, découpé 1-23 / 24-45, avec Guest), toujours pas de logo d'entreprise.
 - Résumé WhatsApp : **un seul message** depuis le 2026-10-14 (en-tête, ligne vide, groupe TM, ligne vide, groupe CC — remplace les deux messages séparés du 2026-08-20), formats exacts en §8.1 du cahier des charges.
 
 **Rétention des données (§15.1/§4.7)** :

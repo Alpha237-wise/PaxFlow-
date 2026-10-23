@@ -40,9 +40,10 @@ describe("buildManifestData (§9.2, revised 2026-08-20: full seat table, no long
     });
   });
 
-  it("uses the 50-seat count for BIRD 9/10, 51 otherwise", () => {
+  it("uses the 50-seat count for BIRD 9/10, 45 for ARPM2, 51 otherwise", () => {
     expect(buildManifestData(crossing, "BIRD 9", [], "50-seats").rows).toHaveLength(50);
     expect(buildManifestData(crossing, "BIRD 1", [], "51-seats").rows).toHaveLength(51);
+    expect(buildManifestData(crossing, "ARPM2", [], "45-seats").rows).toHaveLength(45);
   });
 
   it("shows department alone for a TM row, department/company for a CC row", () => {

@@ -36,6 +36,12 @@ const SLOTS = {
     storagePath: "current-50-seats.png",
     file: "reference/manifest-template-b9-b10-final.png",
   },
+  // ARPM2 / "A2" — reference/manifest A2.jpg stored unresampled (2048x1393).
+  "45-seats": {
+    rowId: "33333333-3333-3333-3333-333333333333",
+    storagePath: "current-45-seats.png",
+    file: "reference/manifest-template-a2-final.png",
+  },
 };
 const layoutRef = process.argv[2] ?? "51-seats";
 const slot = SLOTS[layoutRef];

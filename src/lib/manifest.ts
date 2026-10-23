@@ -2,6 +2,7 @@
 // rendering layer (manifest-view.tsx) just injects these values into a
 // fixed template, never reformulating them (§9.5 — no alteration).
 import { formatDepartmentCompany, summarizeCrossing } from "./crossing-summary";
+import type { SeatLayoutRef } from "./seat-layouts";
 
 export interface ManifestPassenger {
   seat_number: number;
@@ -53,16 +54,17 @@ export interface ManifestCrossingInput {
 // the BIRD used, blank rows included, matching the paper original exactly
 // — not just the occupied ones. Replaces the earlier "dynamic table"
 // behaviour (§9.2 as originally written).
-const SEAT_COUNT: Record<"51-seats" | "50-seats", number> = {
+const SEAT_COUNT: Record<SeatLayoutRef, number> = {
   "51-seats": 51,
   "50-seats": 50,
+  "45-seats": 45,
 };
 
 export function buildManifestData(
   crossing: ManifestCrossingInput,
   vesselName: string,
   passengers: ManifestPassenger[],
-  seatLayoutRef: "51-seats" | "50-seats",
+  seatLayoutRef: SeatLayoutRef,
 ): ManifestData {
   const bySeat = new Map(passengers.map((p) => [p.seat_number, p]));
   const totalSeats = SEAT_COUNT[seatLayoutRef];

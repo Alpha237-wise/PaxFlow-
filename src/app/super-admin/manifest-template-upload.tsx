@@ -18,6 +18,8 @@ import type { SeatLayoutRef } from "@/lib/seat-layouts";
 const OUTPUT_SIZE: Record<SeatLayoutRef, { width: number; height: number }> = {
   "51-seats": { width: 2560, height: 1678 },
   "50-seats": { width: 2560, height: 1920 },
+  // reference/manifest A2.jpg at its native 2048x1393 (not upscaled).
+  "45-seats": { width: 2048, height: 1393 },
 };
 
 type CornerPct = { x: number; y: number };

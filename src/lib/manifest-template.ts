@@ -21,7 +21,7 @@ export interface ManifestTemplateSlot {
   /** Object path inside the manifest-template bucket. */
   storagePath: string;
   /** Primary key of this form's cached copy in the local Dexie table. */
-  localId: "current" | "50-seats";
+  localId: "current" | "50-seats" | "45-seats";
 }
 
 // "51-seats" keeps the original row id / storage path / local key so
@@ -36,6 +36,11 @@ export const MANIFEST_TEMPLATES: Record<SeatLayoutRef, ManifestTemplateSlot> = {
     rowId: "22222222-2222-2222-2222-222222222222",
     storagePath: "current-50-seats.png",
     localId: "50-seats",
+  },
+  "45-seats": {
+    rowId: "33333333-3333-3333-3333-333333333333",
+    storagePath: "current-45-seats.png",
+    localId: "45-seats",
   },
 };
 

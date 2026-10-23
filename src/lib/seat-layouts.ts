@@ -41,9 +41,23 @@ const FIFTY_SEATS: SeatLayout = {
   ],
 };
 
+// Confirmed from the real ARPM2 ("A2") paper form (reference/manifest A2.jpg,
+// 2026-10-22): three blocks, each 15 seats —
+//   left  : one lone seat [1], then 7 pairs [2,3]..[14,15]
+//   centre: 5 triplets [16,17,18]..[28,29,30]
+//   right : one lone seat [31], then 7 pairs [32,33]..[44,45]
+// = 45 seats (the printed lists split 1-23 / 24-45; see the calibration).
+const FORTY_FIVE_SEATS: SeatLayout = {
+  blocks: [
+    [[1], [2, 3], [4, 5], [6, 7], [8, 9], [10, 11], [12, 13], [14, 15]],
+    [[16, 17, 18], [19, 20, 21], [22, 23, 24], [25, 26, 27], [28, 29, 30]],
+    [[31], [32, 33], [34, 35], [36, 37], [38, 39], [40, 41], [42, 43], [44, 45]],
+  ],
+};
+
 // The paper form (manifest template image + its calibration) is selected by
 // this same key — see manifest-template.ts and manifest-template-calibration.ts.
-export type SeatLayoutRef = "51-seats" | "50-seats";
+export type SeatLayoutRef = "51-seats" | "50-seats" | "45-seats";
 
 // Whether this boat type carries guests at all (operational fact confirmed
 // 2026-10-14: no guests on BIRD 9/10). When false, the "Total No. of Guest"
@@ -52,9 +66,12 @@ export type SeatLayoutRef = "51-seats" | "50-seats";
 export const LAYOUT_CARRIES_GUESTS: Record<SeatLayoutRef, boolean> = {
   "51-seats": true,
   "50-seats": false,
+  // The A2 paper form prints a "Total No. of Guest" line, unlike the 50-seat.
+  "45-seats": true,
 };
 
 export const SEAT_LAYOUTS: Record<SeatLayoutRef, SeatLayout> = {
   "51-seats": FIFTY_ONE_SEATS,
   "50-seats": FIFTY_SEATS,
+  "45-seats": FORTY_FIVE_SEATS,
 };

@@ -16,7 +16,7 @@ export interface LocalVessel {
   name: string;
   total_seats: number;
   status: "active" | "out_of_service";
-  seat_layout_ref: "51-seats" | "50-seats";
+  seat_layout_ref: "51-seats" | "50-seats" | "45-seats";
 }
 
 // Cached copy of the signed-in user's OWN profile row — same purpose as
@@ -184,7 +184,7 @@ export interface LocalSyncMeta {
 // vessels/known_people). The key is the table's primary key only, so adding
 // a form needs no Dexie schema version bump.
 export interface LocalManifestTemplate {
-  id: "current" | "50-seats";
+  id: "current" | "50-seats" | "45-seats";
   blob: Blob;
   storage_path: string;
   updated_at: string;

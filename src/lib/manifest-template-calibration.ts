@@ -353,6 +353,113 @@ const RIGHT_SEAT_BLOCK_50: SeatBlockCalibration = {
   },
 };
 
+// ---------------------------------------------------------------------------
+// 45-seat reference (ARPM2 / "A2") — added 2026-10-22.
+//
+// A third paper form: 45 seats in two tables (1-23 left, 24-45 right — so the
+// split is 23 + 22 rows, not 25 + N), and, unlike the 50-seat form, a printed
+// "Total No. of Guest" line in the footer (same seven footer lines as the
+// 51-seat form).
+//
+// Source: reference/manifest A2.jpg (2048x1393 photo), stored UNRESAMPLED as
+// reference/manifest-template-a2-final.png (same pixels, PNG, no perspective
+// warp). Everything below is measured against that exact image; if the stored
+// template is ever replaced by a straightened/re-shot version, ALL of it must
+// be re-measured (same rule as the other two forms).
+//
+// The photo is slightly rotated (rows climb to the right by ~7px per 700px;
+// vertical rules drift ~13px over the table height), so each COLUMN has its
+// own measured row centers and text x is taken at the middle of the drift.
+// Method: numpy darkness relative to a blurred local background; per column,
+// a vertical strip inside the cell, row dividers chained from the header/row-1
+// rule at the expected ~45px pitch, centers = midpoints of consecutive
+// dividers (sub-pixel centroid). The last LEFT row (23) is genuinely taller
+// on this paper (~51px vs ~46px, verified on a zoomed crop) — its center is
+// the true midpoint, not an interpolation. Text x = cell's left edge +1.0pt
+// (Name) / +0.45pt (Company ID, Department). Header values start just inside
+// their printed line; footer values are right-aligned 1.0pt inside each
+// line's own measured right end, 0.45pt above it.
+// ---------------------------------------------------------------------------
+
+const HEADER_FIELDS_45 = {
+  date: { xPct: 12.6, yPct: 5.0 } satisfies FieldPosition,
+  vesselName: { xPct: 37.7, yPct: 6.35 } satisfies FieldPosition,
+  timeOfDeparture: { xPct: 12.6, yPct: 8.05 } satisfies FieldPosition,
+  timeOfArrival: { xPct: 37.7, yPct: 9.4 } satisfies FieldPosition,
+  portOfOrigin: { xPct: 12.6, yPct: 11.1 } satisfies FieldPosition,
+  destination: { xPct: 37.7, yPct: 12.4 } satisfies FieldPosition,
+} as const;
+
+const FOOTER_FIELDS_45 = {
+  captainOnBoard: { xPct: 91.3, yPct: 66.27, align: "right" } satisfies FieldPosition,
+  mechanic: { xPct: 91.68, yPct: 69.87, align: "right" } satisfies FieldPosition,
+  abName: { xPct: 91.63, yPct: 73.47, align: "right" } satisfies FieldPosition,
+  marineHostess: { xPct: 91.97, yPct: 77.07, align: "right" } satisfies FieldPosition,
+  totalTM: { xPct: 91.97, yPct: 80.67, align: "right" } satisfies FieldPosition,
+  totalGuests: { xPct: 92.12, yPct: 84.27, align: "right" } satisfies FieldPosition,
+  totalContractors: { xPct: 92.07, yPct: 87.87, align: "right" } satisfies FieldPosition,
+} as const;
+
+const LEFT_SEAT_BLOCK_45: SeatBlockCalibration = {
+  name: {
+    xPct: 7.5,
+    firstRowYPct: 20.56,
+    lastRowYPct: 93.4,
+    rowYPct: [
+      20.56, 23.92, 27.25, 30.59, 33.92, 37.24, 40.56, 43.88, 47.21, 50.52, 53.83, 57.14, 60.44,
+      63.73, 67.01, 70.29, 73.58, 76.85, 80.12, 83.38, 86.65, 89.91, 93.4,
+    ],
+  },
+  companyId: {
+    xPct: 24.1,
+    firstRowYPct: 20.8,
+    lastRowYPct: 92.95,
+    rowYPct: [
+      20.8, 24.12, 27.44, 30.76, 34.08, 37.39, 40.68, 43.96, 47.25, 50.53, 53.81, 57.08, 60.34,
+      63.6, 66.86, 70.12, 73.36, 76.6, 79.83, 83.06, 86.29, 89.51, 92.95,
+    ],
+  },
+  department: {
+    xPct: 30.4,
+    firstRowYPct: 20.96,
+    lastRowYPct: 92.68,
+    rowYPct: [
+      20.96, 24.27, 27.58, 30.89, 34.19, 37.48, 40.75, 44.01, 47.28, 50.54, 53.8, 57.05, 60.29,
+      63.52, 66.75, 69.98, 73.21, 76.43, 79.64, 82.84, 86.05, 89.26, 92.68,
+    ],
+  },
+};
+
+const RIGHT_SEAT_BLOCK_45: SeatBlockCalibration = {
+  name: {
+    xPct: 44.4,
+    firstRowYPct: 21.5,
+    lastRowYPct: 88.76,
+    rowYPct: [
+      21.5, 24.77, 28.04, 31.3, 34.55, 37.79, 41.01, 44.22, 47.43, 50.63, 53.84, 57.03, 60.22,
+      63.39, 66.56, 69.74, 72.91, 76.08, 79.26, 82.42, 85.58, 88.76,
+    ],
+  },
+  companyId: {
+    xPct: 60.3,
+    firstRowYPct: 22.05,
+    lastRowYPct: 88.07,
+    rowYPct: [
+      22.05, 25.28, 28.49, 31.68, 34.88, 38.06, 41.23, 44.39, 47.54, 50.68, 53.8, 56.93, 60.04,
+      63.14, 66.25, 69.36, 72.47, 75.57, 78.68, 81.8, 84.92, 88.07,
+    ],
+  },
+  department: {
+    xPct: 66.2,
+    firstRowYPct: 22.18,
+    lastRowYPct: 87.86,
+    rowYPct: [
+      22.18, 25.4, 28.61, 31.8, 34.98, 38.15, 41.3, 44.44, 47.57, 50.68, 53.79, 56.89, 59.98,
+      63.07, 66.16, 69.25, 72.34, 75.43, 78.52, 81.63, 84.74, 87.86,
+    ],
+  },
+};
+
 // Everything the renderer needs for one paper form. `footer.totalGuests` is
 // optional: a form without that printed line simply has no such entry, and
 // the view renders only what is present.
@@ -384,5 +491,12 @@ export const MANIFEST_CALIBRATIONS: Record<SeatLayoutRef, ManifestCalibration> =
     leftBlock: LEFT_SEAT_BLOCK_50,
     rightBlock: RIGHT_SEAT_BLOCK_50,
     leftBlockMaxSeat: 25,
+  },
+  "45-seats": {
+    header: HEADER_FIELDS_45,
+    footer: FOOTER_FIELDS_45,
+    leftBlock: LEFT_SEAT_BLOCK_45,
+    rightBlock: RIGHT_SEAT_BLOCK_45,
+    leftBlockMaxSeat: 23,
   },
 };
